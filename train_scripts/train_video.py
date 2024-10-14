@@ -32,6 +32,8 @@ from diffusion.utils.misc import set_random_seed, read_config, init_random_seed,
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 from diffusion.openviddata.datasets import DatasetFromCSV, get_transforms_image
 
+from mmengine.config import Config
+
 warnings.filterwarnings("ignore")  # ignore warning
 
 
@@ -282,7 +284,8 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-    config = read_config(args.config)
+    #config = read_config(args.config)
+    config = Config.fromfile(args.config)
     if args.work_dir is not None:
         config.work_dir = args.work_dir
     if args.resume_from is not None:
