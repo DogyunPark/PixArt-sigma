@@ -18,6 +18,7 @@ from diffusers.models import AutoencoderKL
 from transformers import T5EncoderModel, T5Tokenizer
 from mmcv.runner import LogBuffer
 from PIL import Image
+from einops import rearrange
 from torch.utils.data import RandomSampler
 
 from diffusion import IDDPM, DPMS
