@@ -471,7 +471,7 @@ if __name__ == '__main__':
     #     train_dataloader = build_dataloader(dataset, num_workers=config.num_workers, batch_size=config.train_batch_size, shuffle=True)
 
     dataset = DatasetFromCSV(
-        config.data_path,
+        config.data_root,
         # TODO: change transforms
         transform=(
             get_transforms_image(config.image_size)
