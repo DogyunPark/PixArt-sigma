@@ -82,3 +82,19 @@ def load_checkpoint(checkpoint,
         return epoch, missing, unexpect
     logger.info(f'Load checkpoint from {ckpt_file}. Load ema: {load_ema}.')
     return missing, unexpect
+
+
+def load_checkpoint_pixart(model, ckpt_path, save_as_pt=True):
+    if ckpt_path.endswith(".pt") or ckpt_path.endswith(".pth"):
+        state_dict = find_model(ckpt_path)
+        missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
+        print(f"Missing keys: {missing_keys}")
+        print(f"Unexpected keys: {unexpected_keys}")
+    elif os.path.isdir(ckpt_path):
+        load_from_sharded_state_dict(model, ckpt_path)
+        if save_as_pt:
+            save_path = os.path.join(ckpt_path, "model_ckpt.pt")
+            torch.save(model.state_dict(), save_path)
+            print(f"Model checkpoint saved to {save_path}")
+    else:
+        raise ValueError(f"Invalid checkpoint path: {ckpt_path}")
