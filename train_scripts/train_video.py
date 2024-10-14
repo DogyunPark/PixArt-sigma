@@ -30,8 +30,7 @@ from diffusion.utils.logger import get_root_logger, rename_file_with_creation_ti
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
-
-from openviddata.datasets import DatasetFromCSV, get_transforms_image
+from diffusion.openviddata.datasets import DatasetFromCSV, get_transforms_image
 
 warnings.filterwarnings("ignore")  # ignore warning
 
