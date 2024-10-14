@@ -18,7 +18,7 @@ from timm.models.vision_transformer import Mlp
 from diffusion.model.builder import MODELS
 from diffusion.model.utils import auto_grad_checkpoint, to_2tuple
 from diffusion.model.nets.PixArt_blocks import t2i_modulate, CaptionEmbedder, AttentionKVCompress, MultiHeadCrossAttention, T2IFinalLayer, TimestepEmbedder, SizeEmbedder
-from diffusion.model.nets.PixArt import PixArt, get_2d_sincos_pos_embed
+from diffusion.model.nets.PixArt import PixArt#, get_2d_sincos_pos_embed
 from diffusion.utils.checkpoint import load_checkpoint_pixart
 from diffusion.model.layers.blocks import (
     Attention,
@@ -31,7 +31,7 @@ from diffusion.model.layers.blocks import (
     TimestepEmbedder,
     approx_gelu,
     get_1d_sincos_pos_embed,
-    #get_2d_sincos_pos_embed,
+    get_2d_sincos_pos_embed,
     get_layernorm,
     t2i_modulate,
 )
