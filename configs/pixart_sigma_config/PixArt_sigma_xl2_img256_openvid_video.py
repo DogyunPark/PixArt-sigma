@@ -4,7 +4,7 @@ root = "dataset/video"
 #image_list_json = ['data_info.json']
 
 data = dict(
-    type='InternalDataMSSigma', root='InternData', image_list_json=image_list_json, transform='default_train',
+    type='InternalDataMSSigma', root='InternData', transform='default_train',
     load_vae_feat=False, load_t5_feat=False,
 )
 #image_size = 512
