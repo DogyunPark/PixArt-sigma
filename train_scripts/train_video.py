@@ -32,6 +32,7 @@ from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 from diffusion.openviddata.datasets import DatasetFromCSV, get_transforms_image, get_transforms_video
+from diffusion.openviddata import save_sample
 
 from mmengine.config import Config
 
@@ -63,7 +64,7 @@ def log_validation(model, step, device, vae=None):
         if validation_noise is not None:
             z = torch.clone(validation_noise).to(device)
         else:
-            z = torch.randn(1, 4, latent_size, latent_size, device=device)
+            z = torch.randn(1, 4, config.num_frames, latent_size, latent_size, device=device)
         embed = torch.load(f'output/tmp/{prompt}_{max_length}token.pth', map_location='cpu')
         caption_embs, emb_masks = embed['caption_embeds'].to(device), embed['emb_mask'].to(device)
         # caption_embs = caption_embs[:, None]
@@ -89,37 +90,19 @@ def log_validation(model, step, device, vae=None):
         vae = AutoencoderKL.from_pretrained(config.vae_pretrained).to(accelerator.device).to(torch.float16)
     for prompt, latent in zip(validation_prompts, latents):
         latent = latent.to(torch.float16)
-        samples = vae.decode(latent.detach() / vae.config.scaling_factor).sample
-        samples = torch.clamp(127.5 * samples + 128.0, 0, 255).permute(0, 2, 3, 1).to("cpu", dtype=torch.uint8).numpy()[0]
-        image = Image.fromarray(samples)
-        image_logs.append({"validation_prompt": prompt, "images": [image]})
-
-    for tracker in accelerator.trackers:
-        if tracker.name == "tensorboard":
-            for log in image_logs:
-                images = log["images"]
-                validation_prompt = log["validation_prompt"]
-                formatted_images = []
-                for image in images:
-                    formatted_images.append(np.asarray(image))
-
-                formatted_images = np.stack(formatted_images)
-
-                tracker.writer.add_images(validation_prompt, formatted_images, step, dataformats="NHWC")
-        elif tracker.name == "wandb":
-            import wandb
-            formatted_images = []
-
-            for log in image_logs:
-                images = log["images"]
-                validation_prompt = log["validation_prompt"]
-                for image in images:
-                    image = wandb.Image(image, caption=validation_prompt)
-                    formatted_images.append(image)
-
-            tracker.log({"validation": formatted_images})
-        else:
-            logger.warn(f"image logging not implemented for {tracker.name}")
+        bs = 2
+        B = latent.shape[0]
+        x = rearrange(latent, "B C T H W -> (B T) C H W")
+        x_out = []
+        for i in range(0, x.shape[0], bs):
+            x_bs = x[i : i + bs]
+            x_bs = vae.decode(x_bs.detach() / vae.config.scaling_factor).sample
+            x_out.append(x_bs)
+        x = torch.cat(x_out, dim=0)
+        samples = rearrange(x, "(B T) C H W -> B C T H W", B=B)
+        sample_save_pth = os.path.join(config.work_dir, 'samples_{}'.format(step))
+        os.makedirs(sample_save_pth, exist_ok=True)
+        save_sample(samples, fps=8, os.path.join(sample_save_pth, prompt))
 
     del vae
     flush()
@@ -189,15 +172,15 @@ def train():
                     y_mask = txt_tokens.attention_mask[:, None, None]
 
             # Sample a random timestep for each image
-            bs = clean_images.shape[0]
-            timesteps = torch.randint(0, config.train_sampling_steps, (bs,), device=clean_images.device).long()
+            bs = x.shape[0]
+            timesteps = torch.randint(0, config.train_sampling_steps, (bs,), device=accelerator.device).long()
             grad_norm = None
             data_time_all += time.time() - data_time_start
             with accelerator.accumulate(model):
                 # Predict the noise residual
                 optimizer.zero_grad()
                 #loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info))
-                loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask))
+                loss_term = train_diffusion.training_losses(model, x, timesteps, model_kwargs=dict(y=y, mask=y_mask))
                 loss = loss_term['loss'].mean()
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
@@ -366,7 +349,7 @@ if __name__ == '__main__':
     logger.info(f"Initializing: {init_train} for training")
     image_size = config.image_size  # @param [256, 512]
     latent_size = int(image_size) // 8
-    validation_noise = torch.randn(1, 4, latent_size, latent_size, device='cpu') if getattr(config, 'deterministic_validation', False) else None
+    validation_noise = torch.randn(1, 4, config.num_frames, latent_size, latent_size, device='cpu') if getattr(config, 'deterministic_validation', False) else None
     pred_sigma = getattr(config, 'pred_sigma', True)
     learn_sigma = getattr(config, 'learn_sigma', True) and pred_sigma
     max_length = config.model_max_length
