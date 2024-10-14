@@ -147,3 +147,5 @@ def load_checkpoint_pixart(model, ckpt_path, save_as_pt=True):
             print(f"Model checkpoint saved to {save_path}")
     else:
         raise ValueError(f"Invalid checkpoint path: {ckpt_path}")
+    
+    #return missing_keys, unexpected_keys

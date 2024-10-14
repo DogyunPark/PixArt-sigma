@@ -136,11 +136,15 @@ def train():
 
     load_vae_feat = getattr(train_dataloader.dataset, 'load_vae_feat', False)
     load_t5_feat = getattr(train_dataloader.dataset, 'load_t5_feat', False)
+    num_steps_per_epoch = len(train_dataloader)
     # Now you train the model
     for epoch in range(start_epoch + 1, config.num_epochs + 1):
         data_time_start= time.time()
         data_time_all = 0
-        for step, batch in enumerate(train_dataloader):
+        train_dataloader_iter = iter(train_dataloader)
+        #for step, batch in enumerate(train_dataloader):
+        for step in range(num_steps_per_epoch):
+            batch = next(train_dataloader_iter)
             if step < skip_step:
                 global_step += 1
                 continue    # skip data in the resumed ckpt
@@ -428,11 +432,10 @@ if __name__ == '__main__':
     if config.load_from is not None:
         # missing, unexpected = load_checkpoint(
         #     config.load_from, model, load_ema=config.get('load_ema', False), max_length=max_length)
-        missing, unexpected = load_checkpoint_pixart(
-            model, config.load_from)
+        load_checkpoint_pixart(model, config.load_from)
         
-        logger.warning(f'Missing keys: {missing}')
-        logger.warning(f'Unexpected keys: {unexpected}')
+        #logger.warning(f'Missing keys: {missing}')
+        #logger.warning(f'Unexpected keys: {unexpected}')
 
     # prepare for FSDP clip grad norm calculation
     if accelerator.distributed_type == DistributedType.FSDP:
