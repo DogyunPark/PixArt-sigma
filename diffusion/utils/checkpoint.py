@@ -84,6 +84,48 @@ def load_checkpoint(checkpoint,
     return missing, unexpect
 
 
+
+def find_model(model_name):
+    """
+    Finds a pre-trained DiT model, downloading it if necessary. Alternatively, loads a model from a local path.
+    """
+    if model_name in pretrained_models:  # Find/download our pre-trained DiT checkpoints
+        model = download_model(model_name)
+        model = reparameter(model, model_name)
+        return model
+    else:
+        assert os.path.isfile(model_name), f"Could not find DiT checkpoint at {model_name}"
+        checkpoint = torch.load(model_name, map_location=lambda storage, loc: storage)
+        print(f"Loading {model_name}")
+
+        if "ema" in model_name:  # supports checkpoints from train.py
+            return checkpoint
+
+        if "state_dict" in checkpoint:
+            checkpoint = checkpoint["state_dict"]
+        if "pos_embed_temporal" in checkpoint:
+            del checkpoint["pos_embed_temporal"]
+        if "pos_embed" in checkpoint:
+            del checkpoint["pos_embed"]
+        if "PixArt" in model_name:
+            checkpoint["x_embedder.proj.weight"] = checkpoint["x_embedder.proj.weight"].unsqueeze(2)
+        return checkpoint
+
+
+def download_model(model_name):
+    """
+    Downloads a pre-trained DiT model from the web.
+    """
+    assert model_name in pretrained_models
+    local_path = f"pretrained_models/{model_name}"
+    if not os.path.isfile(local_path):
+        os.makedirs("pretrained_models", exist_ok=True)
+        web_path = pretrained_models[model_name]
+        download_url(web_path, "pretrained_models", model_name)
+    model = torch.load(local_path, map_location=lambda storage, loc: storage)
+    return model
+
+    
 def load_checkpoint_pixart(model, ckpt_path, save_as_pt=True):
     if ckpt_path.endswith(".pt") or ckpt_path.endswith(".pth"):
         state_dict = find_model(ckpt_path)
