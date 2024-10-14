@@ -145,6 +145,8 @@ def train():
         #for step, batch in enumerate(train_dataloader):
         for step in range(num_steps_per_epoch):
             batch = next(train_dataloader_iter)
+            x = batch["video"].to(device, dtype)  # [B, C, T, H, W]
+            y = batch["text"]
             if step < skip_step:
                 global_step += 1
                 continue    # skip data in the resumed ckpt
@@ -153,14 +155,25 @@ def train():
             else:
                 with torch.no_grad():
                     with torch.cuda.amp.autocast(enabled=(config.mixed_precision == 'fp16' or config.mixed_precision == 'bf16')):
-                        posterior = vae.encode(batch[0]).latent_dist
-                        if config.sample_posterior:
-                            z = posterior.sample()
-                        else:
-                            z = posterior.mode()
+                        B = x.shape[0]
+                        x = rearrange(x, "B C T H W -> (B T) C H W")
+                        x_out = []
+                        bs = 2
+                        for i in range(0, x.shape[0], bs):
+                            x_bs = x[i : i + bs]
+                            x_bs = vae.encode(x_bs).latent_dist.sample().mul_(config.scale_factor)
+                            x_out.append(x_bs)
+                        x = torch.cat(x_out, dim=0)
+                        x = rearrange(x, "(B T) C H W -> B C T H W", B=B)
+                        
+                        # posterior = vae.encode(batch[0]).latent_dist
+                        # if config.sample_posterior:
+                        #     z = posterior.sample()
+                        # else:
+                        #     z = posterior.mode()
 
-            clean_images = z * config.scale_factor
-            data_info = batch[3]
+            #clean_images = z * config.scale_factor
+            #data_info = batch[3]
 
             if load_t5_feat:
                 y = batch[1]
@@ -168,7 +181,7 @@ def train():
             else:
                 with torch.no_grad():
                     txt_tokens = tokenizer(
-                        batch[1], max_length=max_length, padding="max_length", truncation=True, return_tensors="pt"
+                        y, max_length=max_length, padding="max_length", truncation=True, return_tensors="pt"
                     ).to(accelerator.device)
                     y = text_encoder(
                         txt_tokens.input_ids, attention_mask=txt_tokens.attention_mask)[0][:, None]
@@ -182,7 +195,8 @@ def train():
             with accelerator.accumulate(model):
                 # Predict the noise residual
                 optimizer.zero_grad()
-                loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info))
+                #loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info))
+                loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask))
                 loss = loss_term['loss'].mean()
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
