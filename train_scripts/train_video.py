@@ -23,7 +23,7 @@ from torch.utils.data import RandomSampler
 from diffusion import IDDPM, DPMS
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
 from diffusion.model.builder import build_model
-from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint
+from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint, load_checkpoint_pixart
 from diffusion.utils.data_sampler import AspectRatioBatchSampler
 from diffusion.utils.dist_utils import synchronize, get_world_size, clip_grad_norm_, flush
 from diffusion.utils.logger import get_root_logger, rename_file_with_creation_time
@@ -426,8 +426,11 @@ if __name__ == '__main__':
     if args.load_from is not None:
         config.load_from = args.load_from
     if config.load_from is not None:
+        # missing, unexpected = load_checkpoint(
+        #     config.load_from, model, load_ema=config.get('load_ema', False), max_length=max_length)
         missing, unexpected = load_checkpoint(
-            config.load_from, model, load_ema=config.get('load_ema', False), max_length=max_length)
+            model, config.load_from)
+        
         logger.warning(f'Missing keys: {missing}')
         logger.warning(f'Unexpected keys: {unexpected}')
 
