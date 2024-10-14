@@ -1,5 +1,5 @@
 _base_ = ['../PixArt_xl2_internal.py']
-data_root = 'dataset/data/train/OpenVidHD.csv'
+data_root = 'dataset/data/train/OpenVid-1M.csv'
 root = "dataset/video"
 #image_list_json = ['data_info.json']
 
@@ -24,8 +24,8 @@ multi_scale = True  # if use multiscale dataset model training
 pe_interpolation = 0.5
 
 # training setting
-num_workers = 10
-train_batch_size = 2  # 48 as default
+num_workers = 2
+train_batch_size = 8  # 48 as default
 num_epochs = 200  # 3
 gradient_accumulation_steps = 1
 grad_checkpointing = True

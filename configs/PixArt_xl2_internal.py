@@ -37,10 +37,10 @@ gradient_clip = 1.0
 gc_step = 1
 auto_lr = dict(rule='sqrt')
 validation_prompts = [
-    "dog",
-    "portrait photo of a girl, photograph, highly detailed face, depth of field",
-    "Self-portrait oil painting, a beautiful cyborg with golden hair, 8k",
-    "Astronaut in a jungle, cold color palette, muted colors, detailed, 8k",
+    "A fluffy teddy bear sits on a bed of soft pillows surrounded by children's toys.",
+    "two elephants are playing on the beach and enjoying a delicious beef stroganoff meal.",
+    "A peaceful cow grazing in a green field under the clear blue sky",
+    "Astronaut walking in a jungle, cold color palette, muted colors, detailed, 8k",
     "A photo of beautiful mountain with realistic sunset and blue lake, highly detailed, masterpiece",
 ]
 
