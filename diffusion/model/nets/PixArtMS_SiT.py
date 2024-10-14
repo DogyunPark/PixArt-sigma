@@ -291,6 +291,14 @@ class STDiT(nn.Module):
         x = x.to(torch.float32)
         return x
 
+    def forward_with_dpmsolver(self, x, timestep, y, **kwargs):
+        """
+        dpm solver donnot need variance prediction
+        """
+        # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
+        model_out = self.forward(x, timestep, y, **kwargs)
+        return model_out.chunk(2, dim=1)[0]
+
     def unpatchify(self, x):
         """
         Args:

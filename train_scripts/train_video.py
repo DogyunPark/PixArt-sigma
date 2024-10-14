@@ -69,7 +69,8 @@ def log_validation(model, step, device, vae=None):
         caption_embs, emb_masks = embed['caption_embeds'].to(device), embed['emb_mask'].to(device)
         # caption_embs = caption_embs[:, None]
         # emb_masks = emb_masks[:, None]
-        model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
+        #model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
+        model_kwargs = dict(mask=emb_masks)
 
         dpm_solver = DPMS(model.forward_with_dpmsolver,
                           condition=caption_embs,
