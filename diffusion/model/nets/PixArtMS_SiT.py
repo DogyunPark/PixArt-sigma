@@ -14,6 +14,7 @@ import torch.nn as nn
 import numpy as np
 from timm.models.layers import DropPath
 from timm.models.vision_transformer import Mlp
+from einops import rearrange
 
 from diffusion.model.builder import MODELS
 from diffusion.model.utils import auto_grad_checkpoint, to_2tuple
