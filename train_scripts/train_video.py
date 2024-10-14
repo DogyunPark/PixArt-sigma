@@ -412,8 +412,8 @@ if __name__ == '__main__':
 
     # build models
     train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma, snr=config.snr_loss)
-    input_size = (config.num_frames, config.image_size, config.image_size)
-    latent_size = vae.get_latent_size(input_size)
+    latent_size = (config.num_frames, config.image_size // 8, config.image_size // 8)
+    #latent_size = vae.get_latent_size(input_size)
     model = build_model(config.model,
                         config.grad_checkpointing,
                         config.get('fp32_attention', False),
