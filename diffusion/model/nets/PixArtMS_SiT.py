@@ -52,7 +52,7 @@ class STDiTBlock(nn.Module):
         super().__init__()
         self.hidden_size = hidden_size
         self.enable_flashattn = enable_flashattn
-        self._enable_sequence_parallelism = enable_sequence_parallelism
+        #self._enable_sequence_parallelism = enable_sequence_parallelism
 
         # if enable_sequence_parallelism:
         #     self.attn_cls = SeqParallelAttention
@@ -148,7 +148,7 @@ class STDiT(nn.Module):
         pe_interpolation=1.0,
         time_scale=1.0,
         freeze=None,
-        enable_flashattn=False,
+        enable_flashattn=True,
         enable_layernorm_kernel=False,
         #enable_sequence_parallelism=False,
         **kwargs,
