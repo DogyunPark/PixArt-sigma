@@ -145,7 +145,7 @@ def train():
         #for step, batch in enumerate(train_dataloader):
         for step in range(num_steps_per_epoch):
             batch = next(train_dataloader_iter)
-            x = batch["video"].to(device, dtype)  # [B, C, T, H, W]
+            x = batch["video"].to(accelerator.device, torch.float16)  # [B, C, T, H, W]
             y = batch["text"]
             if step < skip_step:
                 global_step += 1
