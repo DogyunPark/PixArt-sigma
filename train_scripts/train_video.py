@@ -102,7 +102,7 @@ def log_validation(model, step, device, vae=None):
         samples = rearrange(x, "(B T) C H W -> B C T H W", B=B)
         sample_save_pth = os.path.join(config.work_dir, 'samples_{}'.format(step))
         os.makedirs(sample_save_pth, exist_ok=True)
-        save_sample(samples, fps=8, os.path.join(sample_save_pth, prompt))
+        save_sample(samples, fps=8, save_path=os.path.join(sample_save_pth, prompt))
 
     del vae
     flush()
