@@ -78,7 +78,7 @@ def log_validation(model, step, device, vae, validation_pipeline):
             num_frames=config.num_frames,
             num_inference_steps=50,
             guidance_scale=5,
-            prompt_embeds=caption_emb,
+            prompt_embeds=caption_embs,
             prompt_embeds_mask=emb_masks,
             max_sequence_length=max_length,
         )
