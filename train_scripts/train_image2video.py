@@ -150,6 +150,13 @@ def train():
                             x_out.append(x_bs)
                         x = torch.cat(x_out, dim=0)
                         x = rearrange(x, "(B T) C H W -> B C T H W", B=B)
+
+                        first_frame_cond = torch.zeros_like(x)
+                        first_frame_cond[:,0] = x[:,0].detach().clone()
+                        first_frame_mask = torch.zeros_like(x)
+                        first_frame_mask[:,0] = 1.
+                        
+                        x = torch.cat([x, first_frame_cond, first_frame_mask], axis=1)
                         
                         # posterior = vae.encode(batch[0]).latent_dist
                         # if config.sample_posterior:
@@ -423,6 +430,7 @@ if __name__ == '__main__':
                         input_size=z_latent_size,
                         learn_sigma=learn_sigma,
                         pred_sigma=pred_sigma,
+                        in_channels=8+1,
                         **model_kwargs).train()
     
     model.freeze_not_temporal()
