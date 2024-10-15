@@ -406,10 +406,10 @@ class FluxPipeline(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixin):
         elif prompt_2 is not None and (not isinstance(prompt_2, str) and not isinstance(prompt_2, list)):
             raise ValueError(f"`prompt_2` has to be of type `str` or `list` but is {type(prompt_2)}")
 
-        if prompt_embeds is not None and pooled_prompt_embeds is None:
-            raise ValueError(
-                "If `prompt_embeds` are provided, `pooled_prompt_embeds` also have to be passed. Make sure to generate `pooled_prompt_embeds` from the same text encoder that was used to generate `prompt_embeds`."
-            )
+        # if prompt_embeds is not None and pooled_prompt_embeds is None:
+        #     raise ValueError(
+        #         "If `prompt_embeds` are provided, `pooled_prompt_embeds` also have to be passed. Make sure to generate `pooled_prompt_embeds` from the same text encoder that was used to generate `prompt_embeds`."
+        #     )
 
         if max_sequence_length is not None and max_sequence_length > 512:
             raise ValueError(f"`max_sequence_length` cannot be greater than 512 but is {max_sequence_length}")
