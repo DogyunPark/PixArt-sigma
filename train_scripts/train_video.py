@@ -476,18 +476,18 @@ if __name__ == '__main__':
                                        config.optimizer, **config.auto_lr)
     
     
-    #optimizer = build_optimizer(model, config.optimizer)
+    optimizer = build_optimizer(model, config.optimizer)
 
-    trainable_params = [v for k, v in model.named_parameters() if v.requires_grad]
-    trainable_param_names = [k for k, v in model.named_parameters() if v.requires_grad]
+    # trainable_params = [v for k, v in model.named_parameters() if v.requires_grad]
+    # trainable_param_names = [k for k, v in model.named_parameters() if v.requires_grad]
 
-    optimizer = torch.optim.AdamW(
-        trainable_params,
-        lr=config.optimizer['lr'],
-        betas=config.optimizer['betas'],
-        weight_decay=config.optimizer['weight_decay'],
-        #eps=adam_epsilon,
-    )
+    # optimizer = torch.optim.AdamW(
+    #     trainable_params,
+    #     lr=config.optimizer['lr'],
+    #     betas=config.optimizer['betas'],
+    #     weight_decay=config.optimizer['weight_decay'],
+    #     #eps=adam_epsilon,
+    # )
     
     lr_scheduler = build_lr_scheduler(config, optimizer, train_dataloader, lr_scale_ratio)
 
