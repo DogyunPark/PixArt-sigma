@@ -148,7 +148,7 @@ class STDiT(nn.Module):
         #dtype=torch.float32,
         pe_interpolation=1.0,
         time_scale=1.0,
-        freeze=None,
+        weight_freeze=None,
         enable_flashattn=True,
         enable_layernorm_kernel=False,
         #enable_sequence_parallelism=False,
@@ -212,14 +212,14 @@ class STDiT(nn.Module):
         # init model
         self.initialize_weights()
         self.initialize_temporal()
-        if freeze is not None:
+        if weight_freeze is not None:
             import pdb; pdb.set_trace()
-            assert freeze in ["not_temporal", "text", "not_temporal_and_xembedder"]
-            if freeze == "not_temporal":
+            assert weight_freeze in ["not_temporal", "text", "not_temporal_and_xembedder"]
+            if weight_freeze == "not_temporal":
                 self.freeze_not_temporal()
-            elif freeze == "text":
+            elif weight_freeze == "text":
                 self.freeze_text()
-            elif freeze == "not_temporal_and_xembedder":
+            elif weight_freeze == "not_temporal_and_xembedder":
                 self.freeze_not_temporal_and_xembedder()
 
         # sequence parallel related configs

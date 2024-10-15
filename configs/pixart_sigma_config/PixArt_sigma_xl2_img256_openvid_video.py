@@ -34,7 +34,7 @@ optimizer = dict(type='CAMEWrapper', lr=2e-5, weight_decay=0.0, betas=(0.9, 0.99
 #optimizer = dict(type='AdamWWrapper', lr=2e-5, weight_decay=0.03, betas=(0.9, 0.999))
 lr_schedule_args = dict(num_warmup_steps=1000)
 image_dropout_prob = 0.1
-freeze = "not_temporal_and_xembedder"
+weight_freeze = "not_temporal_and_xembedder"
 
 eval_sampling_steps = 250
 visualize = True
