@@ -238,8 +238,8 @@ def train():
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
                     log_validation(model, global_step, device=accelerator.device, vae=vae, validation_pipeline=validation_pipeline)
-                    #sigmas = np.linspace(1.0, 1 / 1000, 1000)
-                    #scheduler.set_timesteps(simgas=sigmas, device=accelerator.device)
+                    sigmas = np.linspace(1.0, 1 / 1000, 1000)
+                    scheduler.set_timesteps(simgas=sigmas, device=accelerator.device)
 
         if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
             accelerator.wait_for_everyone()
