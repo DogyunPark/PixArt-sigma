@@ -429,8 +429,8 @@ if __name__ == '__main__':
                         config.grad_checkpointing,
                         config.get('fp32_attention', False),
                         input_size=z_latent_size,
-                        learn_sigma=learn_sigma,
-                        pred_sigma=pred_sigma,
+                        learn_sigma=False,
+                        pred_sigma=False,
                         **model_kwargs).train()
     
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
@@ -448,7 +448,7 @@ if __name__ == '__main__':
     if config.load_from is not None:
         # missing, unexpected = load_checkpoint(
         #     config.load_from, model, load_ema=config.get('load_ema', False), max_length=max_length)
-        load_checkpoint_pixart(model, config.load_from)
+        load_checkpoint_pixart(model, config.load_from, last_layer_ignore=True)
         
         #logger.warning(f'Missing keys: {missing}')
         #logger.warning(f'Unexpected keys: {unexpected}')

@@ -93,7 +93,7 @@ pretrained_models = {
     "PixArt-XL-2-1024-MS.pth": "https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-1024-MS.pth",
 }
 
-def find_model(model_name, first_layer_ignore=False):
+def find_model(model_name, first_layer_ignore=False, last_layer_ignore=False):
     """
     Finds a pre-trained DiT model, downloading it if necessary. Alternatively, loads a model from a local path.
     """
@@ -121,6 +121,11 @@ def find_model(model_name, first_layer_ignore=False):
             if first_layer_ignore:
                 del checkpoint["x_embedder.proj.weight"]
                 del checkpoint["x_embedder.proj.bias"]
+            
+            if last_layer_ignore:
+                del checkpoint["final_layer.linear.weight"]
+                del checkpoint["final_layer.linear.bias"]
+                del checkpoint["final_layer.scale_shift_table"]
         return checkpoint
 
 
@@ -138,9 +143,9 @@ def download_model(model_name):
     return model
 
 
-def load_checkpoint_pixart(model, ckpt_path, save_as_pt=True, first_layer_ignore=False):
+def load_checkpoint_pixart(model, ckpt_path, save_as_pt=True, first_layer_ignore=False, last_layer_ignore=False):
     if ckpt_path.endswith(".pt") or ckpt_path.endswith(".pth"):
-        state_dict = find_model(ckpt_path, first_layer_ignore=first_layer_ignore)
+        state_dict = find_model(ckpt_path, first_layer_ignore=first_layer_ignore, last_layer_ignore=last_layer_ignore)
         missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
         print(f"Missing keys: {missing_keys}")
         print(f"Unexpected keys: {unexpected_keys}")
