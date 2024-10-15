@@ -474,7 +474,21 @@ if __name__ == '__main__':
     if config.get('auto_lr', None):
         lr_scale_ratio = auto_scale_lr(config.train_batch_size * get_world_size() * config.gradient_accumulation_steps,
                                        config.optimizer, **config.auto_lr)
-    optimizer = build_optimizer(model, config.optimizer)
+    
+    
+    #optimizer = build_optimizer(model, config.optimizer)
+
+    trainable_params = [v for k, v in model.named_parameters() if v.requires_grad]
+    trainable_param_names = [k for k, v in unet.named_parameters() if v.requires_grad]
+
+    optimizer = torch.optim.AdamW(
+        trainable_params,
+        lr=config.optimizer['lr'],
+        betas=config.optimizer['betas'],
+        weight_decay=config.optimizer['weight_decay'],
+        #eps=adam_epsilon,
+    )
+    
     lr_scheduler = build_lr_scheduler(config, optimizer, train_dataloader, lr_scale_ratio)
 
     timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
