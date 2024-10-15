@@ -410,7 +410,8 @@ if __name__ == '__main__':
 
     model_kwargs = {"pe_interpolation": config.pe_interpolation, "config": config,
                     "model_max_length": max_length, "qk_norm": config.qk_norm,
-                    "kv_compress_config": kv_compress_config, "micro_condition": config.micro_condition}
+                    "kv_compress_config": kv_compress_config, "micro_condition": config.micro_condition,
+                    "freeze": config.freeze,}
 
     # build models
     train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma, snr=config.snr_loss)
@@ -422,7 +423,6 @@ if __name__ == '__main__':
                         input_size=z_latent_size,
                         learn_sigma=learn_sigma,
                         pred_sigma=pred_sigma,
-                        freeze=config.freeze,
                         **model_kwargs).train()
     
     #model.freeze_not_temporal()

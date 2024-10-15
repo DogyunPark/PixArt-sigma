@@ -213,7 +213,7 @@ class STDiT(nn.Module):
         self.initialize_weights()
         self.initialize_temporal()
         if freeze is not None:
-            print(freeze)
+            import pdb; pdb.set_trace()
             assert freeze in ["not_temporal", "text", "not_temporal_and_xembedder"]
             if freeze == "not_temporal":
                 self.freeze_not_temporal()
