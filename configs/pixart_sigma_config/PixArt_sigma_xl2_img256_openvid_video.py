@@ -1,5 +1,5 @@
 _base_ = ['../PixArt_xl2_internal.py']
-data_root = 'dataset/data/train/OpenVid-1M.csv'
+data_root = 'dataset/data/train/OpenVidHD.csv'
 root = "dataset/video"
 #image_list_json = ['data_info.json']
 
