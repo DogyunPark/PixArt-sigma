@@ -238,6 +238,8 @@ def train():
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
                     log_validation(model, global_step, device=accelerator.device, vae=vae, validation_pipeline=validation_pipeline)
+                    sigmas = np.linspace(1.0, 1 / 1000, 1000)
+                    scheduler.set_timesteps(simgas=sigmas, device=accelerator.device)
 
         if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
             accelerator.wait_for_everyone()
@@ -373,7 +375,7 @@ if __name__ == '__main__':
     
     # Scheduler
     scheduler = FlowMatchEulerDiscreteScheduler(**config.noise_scheduler_kwargs)
-    val_scheduler = FlowMatchEulerDiscreteScheduler(**config.noise_scheduler_kwargs)
+    #val_scheduler = FlowMatchEulerDiscreteScheduler(**config.noise_scheduler_kwargs)
     logger.info(f"vae scale factor: {config.scale_factor}")
 
     if config.visualize:
@@ -438,7 +440,7 @@ if __name__ == '__main__':
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
 
     # Validation pipeline
-    validation_pipeline = FluxPipeline(scheduler=val_scheduler,
+    validation_pipeline = FluxPipeline(scheduler=scheduler,
                                     vae=vae,
                                     text_encoder_2=text_encoder,
                                     tokenizer_2=tokenizer,
