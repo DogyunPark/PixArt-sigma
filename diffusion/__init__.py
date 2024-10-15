@@ -7,3 +7,4 @@ from .iddpm import IDDPM
 from .dpm_solver import DPMS
 from .sa_sampler import SASolverSampler
 from .pipeline_flux import FluxPipeline
+from .scheduling_flow_match_euler_discrete import FlowMatchEulerDiscreteScheduler
