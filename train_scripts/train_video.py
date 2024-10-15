@@ -373,6 +373,7 @@ if __name__ == '__main__':
     
     # Scheduler
     scheduler = FlowMatchEulerDiscreteScheduler(**config.noise_scheduler_kwargs)
+    val_scheduler = FlowMatchEulerDiscreteScheduler(**config.noise_scheduler_kwargs)
     logger.info(f"vae scale factor: {config.scale_factor}")
 
     if config.visualize:
@@ -437,7 +438,7 @@ if __name__ == '__main__':
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
 
     # Validation pipeline
-    validation_pipeline = FluxPipeline(scheduler=scheduler,
+    validation_pipeline = FluxPipeline(scheduler=val_scheduler,
                                     vae=vae,
                                     text_encoder_2=text_encoder,
                                     tokenizer_2=tokenizer,
