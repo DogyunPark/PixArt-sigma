@@ -448,7 +448,7 @@ if __name__ == '__main__':
     if config.load_from is not None:
         # missing, unexpected = load_checkpoint(
         #     config.load_from, model, load_ema=config.get('load_ema', False), max_length=max_length)
-        load_checkpoint_pixart(model, config.load_fromm, first_layer_ignore=True)
+        load_checkpoint_pixart(model, config.load_from, first_layer_ignore=True)
         
         #logger.warning(f'Missing keys: {missing}')
         #logger.warning(f'Unexpected keys: {unexpected}')
