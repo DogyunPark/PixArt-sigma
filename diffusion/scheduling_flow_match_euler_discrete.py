@@ -19,9 +19,9 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import torch
 
-from ..configuration_utils import ConfigMixin, register_to_config
-from ..utils import BaseOutput, logging
-from .scheduling_utils import SchedulerMixin
+from diffusers.configuration_utils import ConfigMixin, register_to_config
+from diffusers.utils import BaseOutput, logging
+from diffusers.schedulers.scheduling_utils import SchedulerMixin
 
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
