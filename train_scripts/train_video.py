@@ -73,9 +73,9 @@ def log_validation(model, step, device, vae, validation_pipeline):
         model_kwargs = dict(mask=emb_masks)
 
         denoised = validation_pipeline(
-            height=image_size,
-            weight=image_size,
-            num_frames=num_frames,
+            height=config.image_size,
+            weight=config.image_size,
+            num_frames=config.num_frames,
             num_inference_steps=50,
             guidance_scale=5,
             prompt_embeds=caption_emb,
