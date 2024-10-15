@@ -92,7 +92,7 @@ pretrained_models = {
     "PixArt-XL-2-1024-MS.pth": "https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-1024-MS.pth",
 }
 
-def find_model(model_name):
+def find_model(model_name, first_layer_ignore=False):
     """
     Finds a pre-trained DiT model, downloading it if necessary. Alternatively, loads a model from a local path.
     """
@@ -104,6 +104,12 @@ def find_model(model_name):
         assert os.path.isfile(model_name), f"Could not find DiT checkpoint at {model_name}"
         checkpoint = torch.load(model_name, map_location=lambda storage, loc: storage)
         print(f"Loading {model_name}")
+        
+        if first_layer_ignore:
+            tmp_dict = OrderedDict()
+            for i, j in checkpoint.items():   # 가중치의 모든 키 값 반복문
+                name = i.replace("x_embedder.proj","")  # 매치되지 않는 키 값 변경
+                tmp_dict[name] = j
 
         if "ema" in model_name:  # supports checkpoints from train.py
             return checkpoint
@@ -133,9 +139,9 @@ def download_model(model_name):
     return model
 
 
-def load_checkpoint_pixart(model, ckpt_path, save_as_pt=True):
+def load_checkpoint_pixart(model, ckpt_path, save_as_pt=True, first_layer_ignore=False):
     if ckpt_path.endswith(".pt") or ckpt_path.endswith(".pth"):
-        state_dict = find_model(ckpt_path)
+        state_dict = find_model(ckpt_path, first_layer_ignore=first_layer_ignore)
         missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
         print(f"Missing keys: {missing_keys}")
         print(f"Unexpected keys: {unexpected_keys}")

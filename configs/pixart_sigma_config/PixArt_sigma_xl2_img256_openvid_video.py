@@ -1,5 +1,5 @@
 _base_ = ['../PixArt_xl2_internal.py']
-data_root = 'dataset/data/train/OpenVidHD.csv'
+data_root = 'dataset/data/train/OpenVid.csv'
 root = "dataset/video"
 #image_list_json = ['data_info.json']
 
@@ -30,7 +30,8 @@ num_epochs = 200  # 3
 gradient_accumulation_steps = 1
 grad_checkpointing = True
 gradient_clip = 0.01
-optimizer = dict(type='AdamWWrapper', lr=2e-5, weight_decay=0.0, betas=(0.9, 0.999, 0.9999), eps=(1e-30, 1e-16))
+#optimizer = dict(type='CAMEWrapper', lr=2e-5, weight_decay=0.0, betas=(0.9, 0.999, 0.9999), eps=(1e-30, 1e-16))
+optimizer = dict(type='AdamWWrapper', lr=2e-5, weight_decay=0.0, betas=(0.9, 0.999))
 lr_schedule_args = dict(num_warmup_steps=1000)
 
 eval_sampling_steps = 250
