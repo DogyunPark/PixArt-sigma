@@ -13,6 +13,7 @@ from typing import Tuple, Optional, Callable
 import torch
 from torch.optim.optimizer import Optimizer
 from came_pytorch import CAME
+from torch.optim import AdamW
 
 
 def auto_scale_lr(effective_bs, optimizer_cfg, rule='linear', base_batch_size=256):
@@ -241,6 +242,13 @@ class Lion(Optimizer):
 
 @OPTIMIZERS.register_module()
 class CAMEWrapper(CAME):
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+
+@OPTIMIZERS.register_module()
+class AdamWWrapper(AdamW):
     def __init__(self, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
