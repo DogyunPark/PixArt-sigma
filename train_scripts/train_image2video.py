@@ -16,14 +16,14 @@ import torch
 from accelerate import Accelerator, InitProcessGroupKwargs
 from accelerate.utils import DistributedType
 from diffusers.models import AutoencoderKL
-from diffusers import DDIMScheduler
+#from diffusers import FlowMatchEulerDiscreteScheduler, FluxPipeline
 from transformers import T5EncoderModel, T5Tokenizer
 from mmcv.runner import LogBuffer
 from PIL import Image
 from einops import rearrange
 from torch.utils.data import RandomSampler
 
-from diffusion import IDDPM, DPMS
+from diffusion import IDDPM, DPMS, FluxPipeline, FlowMatchEulerDiscreteScheduler
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
 from diffusion.model.builder import build_model
 from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint, load_checkpoint_pixart
@@ -111,7 +111,6 @@ def log_validation(model, step, device, vae=None):
     flush()
     return image_logs
 
-
 def train():
     if config.get('debug_nan', False):
         DebugUnderflowOverflow(model)
@@ -190,14 +189,22 @@ def train():
             # Sample a random timestep for each image
             bs = x.shape[0]
             timesteps = torch.randint(0, config.train_sampling_steps, (bs,), device=accelerator.device).long()
+            noise = torch.randn_like(x)
+            x = scheduler.scale_noise(x, timesteps, noise)
+            target = (x - noise)
+
             grad_norm = None
             data_time_all += time.time() - data_time_start
             with accelerator.accumulate(model):
                 # Predict the noise residual
                 optimizer.zero_grad()
                 #loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info))
-                loss_term = train_diffusion.training_losses(model, x, timesteps, model_kwargs=dict(y=y, mask=y_mask, x_cond=x_cond))
-                loss = loss_term['loss'].mean()
+                #loss_term = train_diffusion.training_losses(model, x, timesteps, model_kwargs=dict(y=y, mask=y_mask, x_cond=x_cond))
+                #loss = loss_term['loss'].mean()
+
+                loss = (target - noise) ** 2
+                loss = loss.mean()
+
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
                     grad_norm = accelerator.clip_grad_norm_(model.parameters(), config.gradient_clip)
@@ -380,6 +387,8 @@ if __name__ == '__main__':
         text_encoder = T5EncoderModel.from_pretrained(
             args.pipeline_load_from, subfolder="text_encoder", torch_dtype=torch.float16).to(accelerator.device)
 
+    # Scheduler
+    scheduler = FlowMatchEulerDiscreteScheduler(**config.noise_scheduler_kwargs)
     logger.info(f"vae scale factor: {config.scale_factor}")
 
     if config.visualize:
@@ -426,7 +435,8 @@ if __name__ == '__main__':
 
     model_kwargs = {"pe_interpolation": config.pe_interpolation, "config": config,
                     "model_max_length": max_length, "qk_norm": config.qk_norm,
-                    "kv_compress_config": kv_compress_config, "micro_condition": config.micro_condition}
+                    "kv_compress_config": kv_compress_config, "micro_condition": config.micro_condition,
+                    "weight_freeze": config.weight_freeze}
 
     # build models
     train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma, snr=config.snr_loss)
@@ -441,7 +451,6 @@ if __name__ == '__main__':
                         in_channels=8+1,
                         **model_kwargs).train()
     
-    model.freeze_not_temporal()
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
 
     if args.load_from is not None:

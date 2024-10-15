@@ -21,7 +21,7 @@ from PIL import Image
 from einops import rearrange
 from torch.utils.data import RandomSampler
 
-from diffusion import IDDPM, DPMS
+from diffusion import IDDPM, DPMS, FluxPipeline, FlowMatchEulerDiscreteScheduler
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
 from diffusion.model.builder import build_model
 from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint, load_checkpoint_pixart
@@ -47,7 +47,7 @@ def set_fsdp_env():
 
 
 @torch.inference_mode()
-def log_validation(model, step, device, vae=None):
+def log_validation(model, step, device, vae, validation_pipeline):
     torch.cuda.empty_cache()
     model = accelerator.unwrap_model(model).eval()
     hw = torch.tensor([[image_size, image_size]], dtype=torch.float, device=device).repeat(1, 1)
@@ -72,17 +72,15 @@ def log_validation(model, step, device, vae=None):
         #model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
         model_kwargs = dict(mask=emb_masks)
 
-        dpm_solver = DPMS(model.forward_with_dpmsolver,
-                          condition=caption_embs,
-                          uncondition=null_y,
-                          cfg_scale=4.5,
-                          model_kwargs=model_kwargs)
-        denoised = dpm_solver.sample(
-            z,
-            steps=14,
-            order=2,
-            skip_type="time_uniform",
-            method="multistep",
+        denoised = validation_pipeline(
+            height=image_size,
+            weight=image_size,
+            num_frames=num_frames,
+            num_inference_steps=50,
+            guidance_scale=5,
+            prompt_embeds=caption_emb,
+            prompt_embeds_mask=emb_masks,
+            max_sequence_length=max_length,
         )
         latents.append(denoised)
 
@@ -174,14 +172,22 @@ def train():
             # Sample a random timestep for each image
             bs = x.shape[0]
             timesteps = torch.randint(0, config.train_sampling_steps, (bs,), device=accelerator.device).long()
+            noise = torch.randn_like(x)
+            x = scheduler.scale_noise(x, timesteps, noise)
+            target = (x - noise)
+
             grad_norm = None
             data_time_all += time.time() - data_time_start
             with accelerator.accumulate(model):
                 # Predict the noise residual
                 optimizer.zero_grad()
                 #loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info))
-                loss_term = train_diffusion.training_losses(model, x, timesteps, model_kwargs=dict(y=y, mask=y_mask))
-                loss = loss_term['loss'].mean()
+                #loss_term = train_diffusion.training_losses(model, x, timesteps, model_kwargs=dict(y=y, mask=y_mask, x_cond=x_cond))
+                #loss = loss_term['loss'].mean()
+
+                loss = (target - noise) ** 2
+                loss = loss.mean()
+
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
                     grad_norm = accelerator.clip_grad_norm_(model.parameters(), config.gradient_clip)
@@ -230,7 +236,7 @@ def train():
             if config.visualize and (global_step % config.eval_sampling_steps == 0 or (step + 1) == 1):
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
-                    log_validation(model, global_step, device=accelerator.device, vae=vae)
+                    log_validation(model, global_step, device=accelerator.device, vae=vae, validation_pipeline=validation_pipeline)
 
         if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
             accelerator.wait_for_everyone()
@@ -363,7 +369,9 @@ if __name__ == '__main__':
         tokenizer = T5Tokenizer.from_pretrained(args.pipeline_load_from, subfolder="tokenizer")
         text_encoder = T5EncoderModel.from_pretrained(
             args.pipeline_load_from, subfolder="text_encoder", torch_dtype=torch.float16).to(accelerator.device)
-
+    
+    # Scheduler
+    scheduler = FlowMatchEulerDiscreteScheduler(**config.noise_scheduler_kwargs)
     logger.info(f"vae scale factor: {config.scale_factor}")
 
     if config.visualize:
@@ -425,8 +433,15 @@ if __name__ == '__main__':
                         pred_sigma=pred_sigma,
                         **model_kwargs).train()
     
-    #model.freeze_not_temporal()
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
+
+    # Validation pipeline
+    validation_pipeline = FluxPipeline(scheduler=scheduler,
+                                    vae=vae,
+                                    text_encoder_2=text_encoder,
+                                    tokenizer_2=tokenizer,
+                                    transformer=model,
+                                )
 
     if args.load_from is not None:
         config.load_from = args.load_from
@@ -525,4 +540,5 @@ if __name__ == '__main__':
     # objects in the same order you gave them to the prepare method.
     model = accelerator.prepare(model)
     optimizer, train_dataloader, lr_scheduler = accelerator.prepare(optimizer, train_dataloader, lr_scheduler)
+    scheduler = accelerator.prepare(scheduler)
     train()

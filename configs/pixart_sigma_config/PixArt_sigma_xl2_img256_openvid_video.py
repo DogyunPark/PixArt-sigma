@@ -50,4 +50,4 @@ model_max_length = 300
 class_dropout_prob = 0.1
 
 # Inference setting
-noise_scheduler_kwargs=dict(num_train_timesteps=1000, beta_start=0.00085, beta_end=0.012, beta_schedule="linear", steps_offset=1, clip_sample=False)
+noise_scheduler_kwargs=dict(num_train_timesteps=1000)
