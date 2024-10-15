@@ -74,7 +74,7 @@ def log_validation(model, step, device, vae, validation_pipeline):
 
         denoised = validation_pipeline(
             height=config.image_size,
-            weight=config.image_size,
+            width=config.image_size,
             num_frames=config.num_frames,
             num_inference_steps=50,
             guidance_scale=5,
