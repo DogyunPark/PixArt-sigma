@@ -213,11 +213,13 @@ class STDiT(nn.Module):
         self.initialize_weights()
         self.initialize_temporal()
         if freeze is not None:
-            assert freeze in ["not_temporal", "text"]
+            assert freeze in ["not_temporal", "text", "not_temporal_and_xembedder"]
             if freeze == "not_temporal":
                 self.freeze_not_temporal()
             elif freeze == "text":
                 self.freeze_text()
+            elif freeze == "not_temporal_and_xembedder":
+                self.freeze_not_temporal_and_xembedder()
 
         # sequence parallel related configs
         # self.enable_sequence_parallelism = enable_sequence_parallelism
@@ -226,7 +228,7 @@ class STDiT(nn.Module):
         # else:
         self.sp_rank = None
 
-    def forward(self, x, timestep, y, mask=None):
+    def forward(self, x, timestep, y, mask=None, x_cond=None):
         """
         Forward pass of STDiT.
         Args:
@@ -243,6 +245,8 @@ class STDiT(nn.Module):
         timestep = timestep.to(self.dtype)
         y = y.to(self.dtype)
 
+        if x_cond is not None:
+            x = torch.cat([x, x_cond], dim=1)
         # embedding
         x = self.x_embedder(x)  # [B, N, C]
         x = rearrange(x, "B (T S) C -> B T S C", T=self.num_temporal, S=self.num_spatial)

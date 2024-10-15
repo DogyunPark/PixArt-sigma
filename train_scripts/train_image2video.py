@@ -16,6 +16,7 @@ import torch
 from accelerate import Accelerator, InitProcessGroupKwargs
 from accelerate.utils import DistributedType
 from diffusers.models import AutoencoderKL
+from diffusers import DDIMScheduler
 from transformers import T5EncoderModel, T5Tokenizer
 from mmcv.runner import LogBuffer
 from PIL import Image
@@ -163,7 +164,7 @@ def train():
                             first_frame_cond = torch.zeros_like(x)
                             first_frame_mask = torch.zeros((b1, 1, t1, h1, w1)).to(accelerator.device, torch.float16)
                         
-                        x = torch.cat([x, first_frame_cond, first_frame_mask], axis=1)
+                        x_cond = torch.cat([first_frame_cond, first_frame_mask], dim=1)
                         
                         # posterior = vae.encode(batch[0]).latent_dist
                         # if config.sample_posterior:
@@ -195,7 +196,7 @@ def train():
                 # Predict the noise residual
                 optimizer.zero_grad()
                 #loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info))
-                loss_term = train_diffusion.training_losses(model, x, timesteps, model_kwargs=dict(y=y, mask=y_mask))
+                loss_term = train_diffusion.training_losses(model, x, timesteps, model_kwargs=dict(y=y, mask=y_mask, x_cond=x_cond))
                 loss = loss_term['loss'].mean()
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
