@@ -105,12 +105,6 @@ def find_model(model_name, first_layer_ignore=False):
         assert os.path.isfile(model_name), f"Could not find DiT checkpoint at {model_name}"
         checkpoint = torch.load(model_name, map_location=lambda storage, loc: storage)
         print(f"Loading {model_name}")
-        
-        if first_layer_ignore:
-            tmp_dict = OrderedDict()
-            for i, j in checkpoint.items():   # 가중치의 모든 키 값 반복문
-                name = i.replace("x_embedder.proj","")  # 매치되지 않는 키 값 변경
-                tmp_dict[name] = j
 
         if "ema" in model_name:  # supports checkpoints from train.py
             return checkpoint
@@ -123,6 +117,10 @@ def find_model(model_name, first_layer_ignore=False):
             del checkpoint["pos_embed"]
         if "PixArt" in model_name:
             checkpoint["x_embedder.proj.weight"] = checkpoint["x_embedder.proj.weight"].unsqueeze(2)
+
+            if first_layer_ignore:
+                del checkpoint["x_embedder.proj.weight"]
+                del checkpoint["x_embedder.proj.bias"]
         return checkpoint
 
 
