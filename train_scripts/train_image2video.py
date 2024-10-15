@@ -160,7 +160,7 @@ def train():
                             first_frame_mask = torch.zeros((b1, 1, t1, h1, w1)).to(accelerator.device, torch.float16)
                             first_frame_mask[:,:,0] = 1.
                         else:
-                            frist_frame_cond = torch.zeros_like(x)
+                            first_frame_cond = torch.zeros_like(x)
                             first_frame_mask = torch.zeros((b1, 1, t1, h1, w1)).to(accelerator.device, torch.float16)
                         
                         x = torch.cat([x, first_frame_cond, first_frame_mask], axis=1)
