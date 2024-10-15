@@ -173,7 +173,7 @@ def train():
             bs = x.shape[0]
             timesteps = torch.randint(0, config.train_sampling_steps, (bs,), device=accelerator.device).long()
             noise = torch.randn_like(x)
-            x = scheduler.scale_noise(x, timesteps, noise)
+            x_noised = scheduler.scale_noise(x, timesteps, noise)
             target = (x - noise)
 
             grad_norm = None
@@ -184,8 +184,9 @@ def train():
                 #loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info))
                 #loss_term = train_diffusion.training_losses(model, x, timesteps, model_kwargs=dict(y=y, mask=y_mask, x_cond=x_cond))
                 #loss = loss_term['loss'].mean()
+                pred = model(x_noised, timesteps, y, y_mask)
 
-                loss = (target - noise) ** 2
+                loss = (target - pred) ** 2
                 loss = loss.mean()
 
                 accelerator.backward(loss)
