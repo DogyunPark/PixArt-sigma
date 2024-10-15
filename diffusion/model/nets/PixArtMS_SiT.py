@@ -357,6 +357,15 @@ class STDiT(nn.Module):
         for n, p in self.named_parameters():
             if "attn_temp" not in n:
                 p.requires_grad = False
+    
+    def freeze_not_temporal_and_xembedder(self):
+        for n, p in self.named_parameters():
+            if "attn_temp" not in n:
+                p.requires_grad = False
+        
+        for n, p in self.named_parameters():
+            if "x_embedder" in n:
+                p.requires_grad = True
 
     def freeze_text(self):
         for n, p in self.named_parameters():
