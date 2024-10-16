@@ -180,10 +180,10 @@ class FlowWrappedModel:
         return res + th.zeros(broadcast_shape, device=timesteps.device)
 
     def __call__(self, model, x, timestep, **kwargs):
-        pred = model(x, timestep=timesteps, **kwargs)
+        pred = model(x, timestep=timestep, **kwargs)
 
         if self.reparameterization:
-            pred_xstart = self._predict_eps_from_xstart(x, timesteps, pred)
+            pred_xstart = self._predict_eps_from_xstart(x, timestep, pred)
             reparm_pred = pred - pred_xstart
             return reparm_pred
         else:
