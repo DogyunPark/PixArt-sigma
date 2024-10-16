@@ -213,13 +213,15 @@ class STDiT(nn.Module):
         self.initialize_weights()
         self.initialize_temporal()
         if weight_freeze is not None:
-            assert weight_freeze in ["not_temporal", "text", "not_temporal_and_xembedder"]
+            assert weight_freeze in ["not_temporal", "text", "not_temporal_and_xembedder", "not_temporal_and_lastlayer"]
             if weight_freeze == "not_temporal":
                 self.freeze_not_temporal()
             elif weight_freeze == "text":
                 self.freeze_text()
             elif weight_freeze == "not_temporal_and_xembedder":
                 self.freeze_not_temporal_and_xembedder()
+            elif weight_freeze == "not_temporal_and_lastlayerr":
+                self.freeze_not_temporal_and_lastlayer()
 
         # sequence parallel related configs
         # self.enable_sequence_parallelism = enable_sequence_parallelism
@@ -362,6 +364,15 @@ class STDiT(nn.Module):
         for n, p in self.named_parameters():
             if "attn_temp" not in n:
                 p.requires_grad = False
+    
+    def freeze_not_temporal_and_lastlayer(self):
+        for n, p in self.named_parameters():
+            if "attn_temp" not in n:
+                p.requires_grad = False
+        
+        for n, p in self.named_parameters():
+            if "final_layer" in n:
+                p.requires_grad = True
     
     def freeze_not_temporal_and_xembedder(self):
         for n, p in self.named_parameters():
