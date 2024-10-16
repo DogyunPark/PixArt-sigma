@@ -35,6 +35,7 @@ optimizer = dict(type='AdamWWrapper', lr=2e-5, weight_decay=0.03, betas=(0.9, 0.
 lr_schedule_args = dict(num_warmup_steps=1000)
 image_dropout_prob = 0.1
 weight_freeze = "not_temporal_and_lastlayer"
+reparameterization = True
 
 eval_sampling_steps = 150
 visualize = True
