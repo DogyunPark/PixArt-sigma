@@ -47,9 +47,9 @@ def set_fsdp_env():
 
 
 @torch.inference_mode()
-def log_validation(model, step, device, vae, validation_pipeline):
+def log_validation(model, step, device, vae, text_encoder, tokenizer, val_scheduler):
     torch.cuda.empty_cache()
-    model = accelerator.unwrap_model(model).eval()
+    #model = accelerator.unwrap_model(model).eval()
     hw = torch.tensor([[image_size, image_size]], dtype=torch.float, device=device).repeat(1, 1)
     ar = torch.tensor([[1.]], device=device).repeat(1, 1)
     null_y = torch.load(f'output/pretrained_models/null_embed_diffusers_{max_length}token.pth')
@@ -59,6 +59,14 @@ def log_validation(model, step, device, vae, validation_pipeline):
     logger.info("Running validation... ")
     image_logs = []
     latents = []
+
+    # Validation pipeline
+    validation_pipeline = FluxPipeline(scheduler=val_scheduler,
+                                    vae=vae,
+                                    text_encoder_2=text_encoder,
+                                    tokenizer_2=tokenizer,
+                                    transformer=accelerator.unwrap_model(model).eval(),
+                                ).to(accelerator.device)
     
     for prompt in validation_prompts:
         if validation_noise is not None:
@@ -85,8 +93,6 @@ def log_validation(model, step, device, vae, validation_pipeline):
         latents.append(denoised)
 
     torch.cuda.empty_cache()
-    if vae is None:
-        vae = AutoencoderKL.from_pretrained(config.vae_pretrained).to(accelerator.device).to(torch.float16)
     for prompt, latent in zip(validation_prompts, latents):
         latent = latent.to(torch.float16)
         bs = 2
@@ -104,6 +110,9 @@ def log_validation(model, step, device, vae, validation_pipeline):
         save_sample(samples[0], fps=8, save_path=os.path.join(sample_save_pth, prompt))
 
     del vae
+    del tokenizer
+    del text_encoder
+    del validation_pipeline
     flush()
     return image_logs
 
@@ -148,14 +157,6 @@ def train():
                             x_out.append(x_bs)
                         x = torch.cat(x_out, dim=0)
                         x = rearrange(x, "(B T) C H W -> B C T H W", B=B)
-                        # posterior = vae.encode(batch[0]).latent_dist
-                        # if config.sample_posterior:
-                        #     z = posterior.sample()
-                        # else:
-                        #     z = posterior.mode()
-
-            #clean_images = z * config.scale_factor
-            #data_info = batch[3]
 
             if load_t5_feat:
                 y = batch[1]
@@ -174,7 +175,8 @@ def train():
             timesteps = torch.randint(0, config.train_sampling_steps, (bs,), device=accelerator.device).long()
             noise = torch.randn_like(x)
             x_noised = scheduler.scale_noise(x, timesteps, noise)
-            target = (x - noise)
+
+            target = (noise - x)
 
             grad_norm = None
             data_time_all += time.time() - data_time_start
@@ -237,9 +239,9 @@ def train():
             if config.visualize and (global_step % config.eval_sampling_steps == 0 or (step + 1) == 1):
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
-                    log_validation(model, global_step, device=accelerator.device, vae=vae, validation_pipeline=validation_pipeline)
-                    sigmas = np.linspace(1.0, 1 / 1000, 1000)
-                    scheduler.set_timesteps(simgas=sigmas, device=accelerator.device)
+                    log_validation(model, global_step, device=accelerator.device, vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, val_scheduler=val_scheduler)
+                    #sigmas = np.linspace(1.0, 1 / 1000, 1000)
+                    #scheduler.set_timesteps(simgas=sigmas, device=accelerator.device)
 
         if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
             accelerator.wait_for_everyone()
@@ -439,14 +441,6 @@ if __name__ == '__main__':
     
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
 
-    # Validation pipeline
-    validation_pipeline = FluxPipeline(scheduler=val_scheduler,
-                                    vae=vae,
-                                    text_encoder_2=text_encoder,
-                                    tokenizer_2=tokenizer,
-                                    transformer=model,
-                                )
-
     if args.load_from is not None:
         config.load_from = args.load_from
     if config.load_from is not None:
@@ -544,6 +538,6 @@ if __name__ == '__main__':
     # objects in the same order you gave them to the prepare method.
     model = accelerator.prepare(model)
     optimizer, train_dataloader, lr_scheduler = accelerator.prepare(optimizer, train_dataloader, lr_scheduler)
-    scheduler = accelerator.prepare(scheduler)
-    val_scheduler, validation_pipeline = accelerator.prepare(val_scheduler, validation_pipeline)
+    #scheduler = accelerator.prepare(scheduler)
+    #val_scheduler, validation_pipeline = accelerator.prepare(val_scheduler, validation_pipeline)
     train()
