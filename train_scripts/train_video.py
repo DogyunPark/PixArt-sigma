@@ -31,6 +31,7 @@ from diffusion.utils.logger import get_root_logger, rename_file_with_creation_ti
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
+from diffusion.utils.nn import append_dims
 from diffusion.openviddata.datasets import DatasetFromCSV, get_transforms_image, get_transforms_video
 from diffusion.openviddata import save_sample
 
@@ -173,10 +174,12 @@ def train():
 
             # Sample a random timestep for each image
             bs = x.shape[0]
+            dims = x.ndim
             timesteps = torch.randint(0, config.train_sampling_steps, (bs,), device=accelerator.device).long()
             noise = torch.randn_like(x)
-            x_noised = scheduler.scale_noise(x, timesteps, noise)
-
+            sigmas = append_dims(timesteps, dims) / config.train_sampling_steps
+            #x_noised = scheduler.scale_noise(x, timesteps, noise)
+            x_noised = sigmas * noise + (1-sigmas) * x
             target = (noise - x)
 
             grad_norm = None
