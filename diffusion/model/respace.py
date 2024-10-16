@@ -145,7 +145,7 @@ class FlowWrappedModel:
         assert len(betas.shape) == 1, "betas must be 1-D"
         assert (betas > 0).all() and (betas <= 1).all()
 
-        alphas = 1.0 - betas
+        alphas = 1.0 - self.betas
         self.alphas_cumprod = np.cumprod(alphas, axis=0)
         # self.alphas_cumprod_prev = np.append(1.0, self.alphas_cumprod[:-1])
         # self.alphas_cumprod_next = np.append(self.alphas_cumprod[1:], 0.0)
