@@ -730,7 +730,7 @@ class FluxPipeline(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixin):
 
                 # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
                 #timestep = t.expand(latents.shape[0]).to(latents.dtype)
-                timestep = t.expand(latents.shape[0]).to(latents.device).long()
+                timestep = t.expand(latents.shape[0]).to(latents.device).long() - 1
 
                 # noise_pred = self.transformer(
                 #     hidden_states=latents,
