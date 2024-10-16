@@ -1,5 +1,5 @@
 _base_ = ['../PixArt_xl2_internal.py']
-data_root = 'dataset/data/train/OpenVidHD.csv'
+data_root = 'dataset/data/train/OpenVid-1M.csv'
 root = "dataset/video"
 #image_list_json = ['data_info.json']
 
@@ -36,7 +36,7 @@ lr_schedule_args = dict(num_warmup_steps=1000)
 image_dropout_prob = 0.1
 weight_freeze = "not_temporal_and_xembedder"
 
-eval_sampling_steps = 250
+eval_sampling_steps = 150
 visualize = True
 log_interval = 20
 save_model_epochs = 5
