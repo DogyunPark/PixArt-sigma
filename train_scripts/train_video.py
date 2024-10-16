@@ -177,7 +177,8 @@ def train():
             # Sample a random timestep for each image
             bs = x.shape[0]
             dims = x.ndim
-            timesteps = torch.randint(0, config.train_sampling_steps, (bs,), device=accelerator.device).long()
+            # Need to plus one in order to satisfy zero-SNR
+            timesteps = torch.randint(0, config.train_sampling_steps+1, (bs,), device=accelerator.device).long()
             noise = torch.randn_like(x)
             sigmas = append_dims(timesteps, dims) / config.train_sampling_steps
             #x_noised = scheduler.scale_noise(x, timesteps, noise)
