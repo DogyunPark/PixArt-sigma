@@ -161,9 +161,19 @@ class FlowWrappedModel:
     def _predict_xstart_from_eps(self, x_t, t, eps):
         assert x_t.shape == eps.shape
         return (
-            _extract_into_tensor(self.sqrt_recip_alphas_cumprod, t, x_t.shape) * x_t
-            - _extract_into_tensor(self.sqrt_recipm1_alphas_cumprod, t, x_t.shape) * eps
+            _extract_into_tensor(self.sqrt_recip_alphas_cumprod, t, x_t.shape) * x_t -
+            _extract_into_tensor(self.sqrt_recipm1_alphas_cumprod, t, x_t.shape) * eps
         )
+
+    def __call__(self, model, x, timestep, **kwargs):
+        pred = model(x, timestep=timestep, **kwargs)
+
+        if self.reparameterization:
+            pred_xstart = self._predict_xstart_from_eps(x, timestep, pred)
+            reparm_pred = pred - pred_xstart
+            return reparm_pred
+        else:
+            return pred
 
 def _extract_into_tensor(arr, timesteps, broadcast_shape):
         """
@@ -178,13 +188,3 @@ def _extract_into_tensor(arr, timesteps, broadcast_shape):
         while len(res.shape) < len(broadcast_shape):
             res = res[..., None]
         return res + th.zeros(broadcast_shape, device=timesteps.device)
-
-    def __call__(self, model, x, timestep, **kwargs):
-        pred = model(x, timestep=timestep, **kwargs)
-
-        if self.reparameterization:
-            pred_xstart = self._predict_xstart_from_eps(x, timestep, pred)
-            reparm_pred = pred - pred_xstart
-            return reparm_pred
-        else:
-            return pred
