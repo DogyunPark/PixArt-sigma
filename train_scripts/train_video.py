@@ -49,7 +49,7 @@ def set_fsdp_env():
 
 
 @torch.inference_mode()
-def log_validation(model, step, device, vae, text_encoder, tokenizer, val_scheduler, FlowModel):
+def log_validation(model, step, device, vae, text_encoder, tokenizer, val_scheduler):
     torch.cuda.empty_cache()
     #model = accelerator.unwrap_model(model).eval()
     hw = torch.tensor([[image_size, image_size]], dtype=torch.float, device=device).repeat(1, 1)
@@ -92,7 +92,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
             prompt_embeds_mask=emb_masks,
             max_sequence_length=max_length,
             device=device,
-            FlowModel=FlowModel,
+            #FlowModel=FlowModel,
         )
         latents.append(denoised)
 
@@ -117,7 +117,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
     del tokenizer
     del text_encoder
     del validation_pipeline
-    del FlowModel
+    #del FlowModel
     flush()
     return image_logs
 
@@ -194,8 +194,8 @@ def train():
                 #loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info))
                 #loss_term = train_diffusion.training_losses(model, x, timesteps, model_kwargs=dict(y=y, mask=y_mask, x_cond=x_cond))
                 #loss = loss_term['loss'].mean()
-                #pred = model(x_noised, timesteps, y, y_mask)
-                pred = FlowModel(model, x_noised, timesteps, y=y, mask=y_mask)
+                pred = model(x_noised, timesteps, y, y_mask)
+                #pred = FlowModel(model, x_noised, timesteps, y=y, mask=y_mask)
 
                 loss = (target - pred) ** 2
                 loss = loss.mean()
@@ -247,7 +247,7 @@ def train():
             if config.visualize and (global_step % config.eval_sampling_steps == 0 or (step + 1) == 1):
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
-                    log_validation(model, global_step, device=accelerator.device, vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, val_scheduler=val_scheduler, FlowModel=FlowModel)
+                    log_validation(model, global_step, device=accelerator.device, vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, val_scheduler=val_scheduler)
                     #sigmas = np.linspace(1.0, 1 / 1000, 1000)
                     #scheduler.set_timesteps(simgas=sigmas, device=accelerator.device)
 
@@ -437,7 +437,7 @@ if __name__ == '__main__':
 
     # build models
     #train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma, snr=config.snr_loss)
-    FlowModel = FlowWrappedModel(config.reparameterization)
+    #FlowModel = FlowWrappedModel(config.reparameterization)
     z_latent_size = (config.num_frames, config.image_size // 8, config.image_size // 8)
     #latent_size = vae.get_latent_size(input_size)
     model = build_model(config.model,

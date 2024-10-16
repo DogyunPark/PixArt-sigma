@@ -554,7 +554,7 @@ class FluxPipeline(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixin):
         callback_on_step_end_tensor_inputs: List[str] = ["latents"],
         max_sequence_length: int = 512,
         device: Optional[Union[str, torch.device]] = None,
-        FlowModel=None,
+        #FlowModel=None,
     ):
         r"""
         Function invoked when calling the pipeline for generation.
@@ -744,15 +744,15 @@ class FluxPipeline(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixin):
                 #     return_dict=False,
                 # )[0]
 
-                if FlowModel is not None:
-                    noise_pred = FlowModel(self.transformer, latents, timestep,y=prompt_embeds,mask=prompt_embeds_mask)
-                else:
-                    noise_pred = self.transformer(
-                        x=latents,
-                        timestep=timestep,
-                        y=prompt_embeds,
-                        mask=prompt_embeds_mask,
-                    )
+                #if FlowModel is not None:
+                #    noise_pred = FlowModel(self.transformer, latents, timestep,y=prompt_embeds,mask=prompt_embeds_mask)
+                #else:
+                noise_pred = self.transformer(
+                    x=latents,
+                    timestep=timestep,
+                    y=prompt_embeds,
+                    mask=prompt_embeds_mask,
+                )
 
                 # compute the previous noisy sample x_t -> x_t-1
                 latents_dtype = latents.dtype
