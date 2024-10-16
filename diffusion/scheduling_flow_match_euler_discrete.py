@@ -216,7 +216,7 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
 
         indices = (schedule_timesteps == timestep).nonzero()
 
-        import pdb; pdb.set_trace()#
+        #import pdb; pdb.set_trace()#
 
         # The sigma index that is taken for the **very** first `step`
         # is always the second index (or the last index if there is only 1)
