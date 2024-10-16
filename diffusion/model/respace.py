@@ -164,8 +164,8 @@ class FlowWrappedModel:
             _extract_into_tensor(self.sqrt_recip_alphas_cumprod, t, x_t.shape) * x_t
             - _extract_into_tensor(self.sqrt_recipm1_alphas_cumprod, t, x_t.shape) * eps
         )
-    
-    def _extract_into_tensor(arr, timesteps, broadcast_shape):
+
+def _extract_into_tensor(arr, timesteps, broadcast_shape):
         """
         Extract values from a 1-D numpy array for a batch of indices.
         :param arr: the 1-D numpy array.
