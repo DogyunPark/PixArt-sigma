@@ -6,7 +6,8 @@
 import numpy as np
 import torch as th
 
-from .gaussian_diffusion import GaussianDiffusion
+from .gaussian_diffusion import GaussianDiffusion, get_named_beta_schedule
+#from .gaussian_diffusion import get_named_beta_schedule
 
 
 def space_timesteps(num_timesteps, section_counts):
@@ -132,3 +133,58 @@ class _WrappedModel:
         # if self.rescale_timesteps:
         #     new_ts = new_ts.float() * (1000.0 / self.original_num_steps)
         return self.model(x, timestep=new_ts, **kwargs)
+
+
+
+class FlowWrappedModel:
+    def __init__(self, reparameterization=True, noise_schedule='linear', diffusion_steps=1000):
+        #self.model = model
+        self.reparameterization = reparameterization
+        betas = th.tensor(get_named_beta_schedule(noise_schedule, diffusion_steps))
+        self.betas = np.array(betas, dtype=np.float64)
+        assert len(betas.shape) == 1, "betas must be 1-D"
+        assert (betas > 0).all() and (betas <= 1).all()
+
+        alphas = 1.0 - betas
+        self.alphas_cumprod = np.cumprod(alphas, axis=0)
+        # self.alphas_cumprod_prev = np.append(1.0, self.alphas_cumprod[:-1])
+        # self.alphas_cumprod_next = np.append(self.alphas_cumprod[1:], 0.0)
+        # assert self.alphas_cumprod_prev.shape == (self.num_timesteps,)
+
+        # # calculations for diffusion q(x_t | x_{t-1}) and others
+        # self.sqrt_alphas_cumprod = np.sqrt(self.alphas_cumprod)
+        # self.sqrt_one_minus_alphas_cumprod = np.sqrt(1.0 - self.alphas_cumprod)
+        # self.log_one_minus_alphas_cumprod = np.log(1.0 - self.alphas_cumprod)
+        self.sqrt_recip_alphas_cumprod = np.sqrt(1.0 / self.alphas_cumprod)
+        self.sqrt_recipm1_alphas_cumprod = np.sqrt(1.0 / self.alphas_cumprod - 1)
+
+    def _predict_xstart_from_eps(self, x_t, t, eps):
+        assert x_t.shape == eps.shape
+        return (
+            _extract_into_tensor(self.sqrt_recip_alphas_cumprod, t, x_t.shape) * x_t
+            - _extract_into_tensor(self.sqrt_recipm1_alphas_cumprod, t, x_t.shape) * eps
+        )
+    
+    def _extract_into_tensor(arr, timesteps, broadcast_shape):
+        """
+        Extract values from a 1-D numpy array for a batch of indices.
+        :param arr: the 1-D numpy array.
+        :param timesteps: a tensor of indices into the array to extract.
+        :param broadcast_shape: a larger shape of K dimensions with the batch
+                                dimension equal to the length of timesteps.
+        :return: a tensor of shape [batch_size, 1, ...] where the shape has K dims.
+        """
+        res = th.from_numpy(arr).to(device=timesteps.device)[timesteps].float()
+        while len(res.shape) < len(broadcast_shape):
+            res = res[..., None]
+        return res + th.zeros(broadcast_shape, device=timesteps.device)
+
+    def __call__(self, model, x, timestep, **kwargs):
+        pred = model(x, timestep=timesteps, **kwargs)
+
+        if self.reparameterization:
+            pred_xstart = self._predict_eps_from_xstart(x, timesteps, pred)
+            reparm_pred = pred - pred_xstart
+            return reparm_pred
+        else:
+            return pred

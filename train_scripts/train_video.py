@@ -34,6 +34,7 @@ from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 from diffusion.utils.nn import append_dims
 from diffusion.openviddata.datasets import DatasetFromCSV, get_transforms_image, get_transforms_video
 from diffusion.openviddata import save_sample
+from diffusion.model.respace import FlowWrappedModel
 
 from mmengine.config import Config
 
@@ -190,7 +191,8 @@ def train():
                 #loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info))
                 #loss_term = train_diffusion.training_losses(model, x, timesteps, model_kwargs=dict(y=y, mask=y_mask, x_cond=x_cond))
                 #loss = loss_term['loss'].mean()
-                pred = model(x_noised, timesteps, y, y_mask)
+                #pred = model(x_noised, timesteps, y, y_mask)
+                pred = FlowModel(model, x_noised, timesteps, y, y_mask)
 
                 loss = (target - pred) ** 2
                 loss = loss.mean()
@@ -431,7 +433,8 @@ if __name__ == '__main__':
                     "weight_freeze": config.weight_freeze}
 
     # build models
-    train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma, snr=config.snr_loss)
+    #train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma, snr=config.snr_loss)
+    FlowModel = FlowWrappedModel(config.reparameterization)
     z_latent_size = (config.num_frames, config.image_size // 8, config.image_size // 8)
     #latent_size = vae.get_latent_size(input_size)
     model = build_model(config.model,

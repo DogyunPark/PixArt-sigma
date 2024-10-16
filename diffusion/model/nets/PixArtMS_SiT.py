@@ -220,7 +220,7 @@ class STDiT(nn.Module):
                 self.freeze_text()
             elif weight_freeze == "not_temporal_and_xembedder":
                 self.freeze_not_temporal_and_xembedder()
-            elif weight_freeze == "not_temporal_and_lastlayerr":
+            elif weight_freeze == "not_temporal_and_lastlayer":
                 self.freeze_not_temporal_and_lastlayer()
 
         # sequence parallel related configs
