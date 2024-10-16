@@ -183,7 +183,7 @@ class FlowWrappedModel:
         pred = model(x, timestep=timestep, **kwargs)
 
         if self.reparameterization:
-            pred_xstart = self._predict_eps_from_xstart(x, timestep, pred)
+            pred_xstart = self._predict_xstart_from_eps(x, timestep, pred)
             reparm_pred = pred - pred_xstart
             return reparm_pred
         else:

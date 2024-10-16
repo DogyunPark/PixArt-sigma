@@ -92,6 +92,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
             prompt_embeds_mask=emb_masks,
             max_sequence_length=max_length,
             device=device,
+            FlowModel=FlowModel,
         )
         latents.append(denoised)
 
