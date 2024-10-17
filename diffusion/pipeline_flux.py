@@ -528,6 +528,9 @@ class FluxPipeline(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixin):
     @property
     def interrupt(self):
         return self._interrupt
+    
+    def do_classifier_free_guidance(self):
+        return self._guidance_scale > 1
 
     @torch.no_grad()
     @replace_example_docstring(EXAMPLE_DOC_STRING)
@@ -547,6 +550,7 @@ class FluxPipeline(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixin):
         prompt_embeds: Optional[torch.FloatTensor] = None,
         prompt_embeds_mask: Optional[torch.FloatTensor] = None,
         pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
+        uncond_prompt_embeds: Optional[torch.FloatTensor] = None,
         output_type: Optional[str] = "pil",
         return_dict: bool = True,
         joint_attention_kwargs: Optional[Dict[str, Any]] = None,
@@ -679,6 +683,9 @@ class FluxPipeline(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixin):
                 lora_scale=lora_scale,
             )
 
+        if self.do_classifier_free_guidance:
+            prompt_embeds = torch.cat([uncond_prompt_embeds, prompt_embeds])
+
         # 4. Prepare latent variables
         num_channels_latents = self.transformer.in_channels
         #latents, latent_image_ids = self.prepare_latents(
@@ -728,6 +735,8 @@ class FluxPipeline(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixin):
                 if self.interrupt:
                     continue
 
+                latents_model_input = torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
+                
                 # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
                 #timestep = t.expand(latents.shape[0]).to(latents.dtype)
                 timestep = t.expand(latents.shape[0]).to(latents.device).long()
@@ -748,11 +757,15 @@ class FluxPipeline(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixin):
                 #    noise_pred = FlowModel(self.transformer, latents, timestep,y=prompt_embeds,mask=prompt_embeds_mask)
                 #else:
                 noise_pred = self.transformer(
-                    x=latents,
+                    x=latents_model_input,
                     timestep=timestep,
                     y=prompt_embeds,
                     mask=prompt_embeds_mask,
                 )
+
+                if self.do_classifier_free_guidance:
+                    noise_pred_uncond, noise_pred_cond = noise_pred.chunk(2)
+                    noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
 
                 # compute the previous noisy sample x_t -> x_t-1
                 latents_dtype = latents.dtype
