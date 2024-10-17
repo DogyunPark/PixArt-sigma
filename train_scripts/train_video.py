@@ -52,7 +52,7 @@ def set_fsdp_env():
 def log_validation(model, step, device, vae, text_encoder, tokenizer, val_scheduler):
     torch.cuda.empty_cache()
     #model = accelerator.unwrap_model(model).eval()
-    model.eval()
+    #model.eval()
     hw = torch.tensor([[image_size, image_size]], dtype=torch.float, device=device).repeat(1, 1)
     ar = torch.tensor([[1.]], device=device).repeat(1, 1)
     null_y = torch.load(f'output/pretrained_models/null_embed_diffusers_{max_length}token.pth')
@@ -62,14 +62,6 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
     logger.info("Running validation... ")
     image_logs = []
     latents = []
-
-    # Validation pipeline
-    validation_pipeline = FluxPipeline(scheduler=val_scheduler,
-                                    vae=vae,
-                                    text_encoder_2=text_encoder,
-                                    tokenizer_2=tokenizer,
-                                    transformer=model,
-                                )
     
     for prompt in validation_prompts:
         if validation_noise is not None:
@@ -115,15 +107,15 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
         os.makedirs(sample_save_pth, exist_ok=True)
         save_sample(samples[0], fps=8, save_path=os.path.join(sample_save_pth, prompt))
 
-    model.train()
-    
-    del vae
-    del tokenizer
-    del text_encoder
-    del validation_pipeline
-    #del model
-    #del FlowModel
-    flush()
+    #model.train()
+
+    # del vae
+    # del tokenizer
+    # del text_encoder
+    # del validation_pipeline
+    # del model
+    # del FlowModel
+    # flush()
     #return image_logs
 
 
@@ -470,6 +462,14 @@ if __name__ == '__main__':
         
         #logger.warning(f'Missing keys: {missing}')
         #logger.warning(f'Unexpected keys: {unexpected}')
+    
+    # Validation pipeline
+    validation_pipeline = FluxPipeline(scheduler=val_scheduler,
+                                    vae=vae,
+                                    text_encoder_2=text_encoder,
+                                    tokenizer_2=tokenizer,
+                                    transformer=model,
+                                )
 
     # prepare for FSDP clip grad norm calculation
     if accelerator.distributed_type == DistributedType.FSDP:
