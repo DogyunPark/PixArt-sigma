@@ -375,7 +375,10 @@ class STDiT(nn.Module):
                 p.requires_grad = True
         
         for n, p in self.named_parameters():
-            if "blocks.27" in n:
+            if "blocks.27.scale_shift_table" in n:
+                p.requires_grad = True
+            
+            if "blocks.27.mlp" in n:
                 p.requires_grad = True
     
     def freeze_not_temporal_and_xembedder(self):
