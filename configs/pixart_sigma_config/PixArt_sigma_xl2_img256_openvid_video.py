@@ -34,8 +34,8 @@ gradient_clip = 0.01
 optimizer = dict(type='AdamWWrapper', lr=1e-4, weight_decay=0.03, betas=(0.9, 0.999))
 lr_schedule_args = dict(num_warmup_steps=1000)
 image_dropout_prob = 0.1
-#weight_freeze = "not_temporal_and_lastlayer"
-weight_freeze = None
+weight_freeze = "not_temporal_and_lastlayer"
+#weight_freeze = None
 reparameterization = False
 
 eval_sampling_steps = 150
