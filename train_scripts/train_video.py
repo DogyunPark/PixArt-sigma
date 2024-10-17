@@ -51,8 +51,8 @@ def set_fsdp_env():
 @torch.inference_mode()
 def log_validation(model, step, device, vae, text_encoder, tokenizer, val_scheduler):
     torch.cuda.empty_cache()
-    #model_eval = accelerator.unwrap_model(model).eval()
-    model.eval()
+    model = accelerator.unwrap_model(model).eval()
+    #model.eval()
     hw = torch.tensor([[image_size, image_size]], dtype=torch.float, device=device).repeat(1, 1)
     ar = torch.tensor([[1.]], device=device).repeat(1, 1)
     null_y = torch.load(f'output/pretrained_models/null_embed_diffusers_{max_length}token.pth')
@@ -115,13 +115,13 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
         os.makedirs(sample_save_pth, exist_ok=True)
         save_sample(samples[0], fps=8, save_path=os.path.join(sample_save_pth, prompt))
 
-    model.train()
-    #del vae
-    #del tokenizer
-    #del text_encoder
-    #del validation_pipeline
+    del vae
+    del tokenizer
+    del text_encoder
+    del validation_pipeline
+    del model
     #del FlowModel
-    #flush()
+    flush()
     #return image_logs
 
 
