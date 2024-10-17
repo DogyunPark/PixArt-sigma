@@ -248,11 +248,12 @@ def train():
             if config.visualize and (global_step % config.eval_sampling_steps == 0 or (step + 1) == 1):
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
-                    import pdb; pdb.set_trace()
+                    #import pdb; pdb.set_trace()
+                    print('Start Evaluation!')
                     log_validation(model, global_step, device=accelerator.device, vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, val_scheduler=val_scheduler)
                     #sigmas = np.linspace(1.0, 1 / 1000, 1000)
                     #scheduler.set_timesteps(simgas=sigmas, device=accelerator.device)
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             print('End Evaluation!')
             accelerator.wait_for_everyone()
 
