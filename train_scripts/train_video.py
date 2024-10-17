@@ -113,13 +113,13 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
         os.makedirs(sample_save_pth, exist_ok=True)
         save_sample(samples[0], fps=8, save_path=os.path.join(sample_save_pth, prompt))
 
-    del vae
-    del tokenizer
-    del text_encoder
-    del validation_pipeline
+    #del vae
+    #del tokenizer
+    #del text_encoder
+    #del validation_pipeline
     #del FlowModel
-    flush()
-    return image_logs
+    #flush()
+    #return image_logs
 
 
 def train():
