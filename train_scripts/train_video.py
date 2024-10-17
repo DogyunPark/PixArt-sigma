@@ -90,7 +90,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
             guidance_scale=5,
             prompt_embeds=caption_embs,
             prompt_embeds_mask=emb_masks,
-            uncond_prompt_embeds=uncond_prompt_embeds,
+            uncond_prompt_embeds=null_y,
             max_sequence_length=max_length,
             device=device,
             #FlowModel=FlowModel,
