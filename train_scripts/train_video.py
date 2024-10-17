@@ -501,8 +501,8 @@ if __name__ == '__main__':
     
     #optimizer = build_optimizer(model, config.optimizer)
 
-     trainable_params = [v for k, v in model.named_parameters() if v.requires_grad]
-     trainable_param_names = [k for k, v in model.named_parameters() if v.requires_grad]
+    trainable_params = [v for k, v in model.named_parameters() if v.requires_grad]
+    trainable_param_names = [k for k, v in model.named_parameters() if v.requires_grad]
 
     optimizer = torch.optim.AdamW(
         trainable_params,
