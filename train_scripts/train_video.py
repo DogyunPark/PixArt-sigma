@@ -142,7 +142,7 @@ def train():
         train_dataloader_iter = iter(train_dataloader)
         #for step, batch in enumerate(train_dataloader):
         for step in range(num_steps_per_epoch):
-            import pdb; pdb.set_trace()
+            print('step')
             batch = next(train_dataloader_iter)
             x = batch["video"].to(accelerator.device, torch.float16)  # [B, C, T, H, W]
             y = batch["text"]
