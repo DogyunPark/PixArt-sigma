@@ -373,6 +373,10 @@ class STDiT(nn.Module):
         for n, p in self.named_parameters():
             if "final_layer" in n:
                 p.requires_grad = True
+        
+        for n, p in self.named_parameters():
+            if "blocks.27" in n:
+                p.requires_grad = True
     
     def freeze_not_temporal_and_xembedder(self):
         for n, p in self.named_parameters():

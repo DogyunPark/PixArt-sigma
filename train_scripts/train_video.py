@@ -244,12 +244,13 @@ def train():
                                     optimizer=optimizer,
                                     lr_scheduler=lr_scheduler
                                     )
-            # if config.visualize and (global_step % config.eval_sampling_steps == 0 or (step + 1) == 1):
-            #     accelerator.wait_for_everyone()
-            #     if accelerator.is_main_process:
-            #         log_validation(model, global_step, device=accelerator.device, vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, val_scheduler=val_scheduler)
+            if config.visualize and (global_step % config.eval_sampling_steps == 0 or (step + 1) == 1):
+                accelerator.wait_for_everyone()
+                if accelerator.is_main_process:
+                    log_validation(model, global_step, device=accelerator.device, vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, val_scheduler=val_scheduler)
                     #sigmas = np.linspace(1.0, 1 / 1000, 1000)
                     #scheduler.set_timesteps(simgas=sigmas, device=accelerator.device)
+            accelerator.wait_for_everyone()
 
         if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
             accelerator.wait_for_everyone()
