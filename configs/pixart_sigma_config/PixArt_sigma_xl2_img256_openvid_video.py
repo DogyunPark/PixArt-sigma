@@ -38,7 +38,7 @@ weight_freeze = "not_temporal_and_lastlayer"
 #weight_freeze = None
 reparameterization = False
 
-eval_sampling_steps = 150
+eval_sampling_steps = 250
 visualize = True
 log_interval = 20
 save_model_epochs = 5
