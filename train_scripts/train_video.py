@@ -141,7 +141,6 @@ def train():
         train_dataloader_iter = iter(train_dataloader)
         #for step, batch in enumerate(train_dataloader):
         for step in range(num_steps_per_epoch):
-            print('step')
             batch = next(train_dataloader_iter)
             x = batch["video"].to(accelerator.device, torch.float16)  # [B, C, T, H, W]
             y = batch["text"]
@@ -253,8 +252,6 @@ def train():
                     log_validation(model, global_step, device=accelerator.device, vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, val_scheduler=val_scheduler)
                     #sigmas = np.linspace(1.0, 1 / 1000, 1000)
                     #scheduler.set_timesteps(simgas=sigmas, device=accelerator.device)
-            #import pdb; pdb.set_trace()
-            print('End Evaluation!')
             accelerator.wait_for_everyone()
 
         if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
