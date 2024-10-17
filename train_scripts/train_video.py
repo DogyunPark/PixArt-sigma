@@ -51,7 +51,8 @@ def set_fsdp_env():
 @torch.inference_mode()
 def log_validation(model, step, device, vae, text_encoder, tokenizer, val_scheduler):
     torch.cuda.empty_cache()
-    model_eval = accelerator.unwrap_model(model).eval()
+    #model_eval = accelerator.unwrap_model(model).eval()
+    model.eval()
     hw = torch.tensor([[image_size, image_size]], dtype=torch.float, device=device).repeat(1, 1)
     ar = torch.tensor([[1.]], device=device).repeat(1, 1)
     null_y = torch.load(f'output/pretrained_models/null_embed_diffusers_{max_length}token.pth')
@@ -67,7 +68,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
                                     vae=vae,
                                     text_encoder_2=text_encoder,
                                     tokenizer_2=tokenizer,
-                                    transformer=model_eval,
+                                    transformer=model,
                                 )
     
     for prompt in validation_prompts:
@@ -114,6 +115,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
         os.makedirs(sample_save_pth, exist_ok=True)
         save_sample(samples[0], fps=8, save_path=os.path.join(sample_save_pth, prompt))
 
+    model.train()
     #del vae
     #del tokenizer
     #del text_encoder
@@ -246,15 +248,15 @@ def train():
                                     optimizer=optimizer,
                                     lr_scheduler=lr_scheduler
                                     )
-            # if config.visualize and (global_step % config.eval_sampling_steps == 0 or (step + 1) == 1):
-            #     accelerator.wait_for_everyone()
-            #     if accelerator.is_main_process:
-            #         #import pdb; pdb.set_trace()
-            #         print('Start Evaluation!')
-            #         log_validation(model, global_step, device=accelerator.device, vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, val_scheduler=val_scheduler)
-            #         #sigmas = np.linspace(1.0, 1 / 1000, 1000)
-            #         #scheduler.set_timesteps(simgas=sigmas, device=accelerator.device)
-            # #import pdb; pdb.set_trace()
+            if config.visualize and (global_step % config.eval_sampling_steps == 0 or (step + 1) == 1):
+                accelerator.wait_for_everyone()
+                if accelerator.is_main_process:
+                    #import pdb; pdb.set_trace()
+                    print('Start Evaluation!')
+                    log_validation(model, global_step, device=accelerator.device, vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, val_scheduler=val_scheduler)
+                    #sigmas = np.linspace(1.0, 1 / 1000, 1000)
+                    #scheduler.set_timesteps(simgas=sigmas, device=accelerator.device)
+            #import pdb; pdb.set_trace()
             print('End Evaluation!')
             accelerator.wait_for_everyone()
 
