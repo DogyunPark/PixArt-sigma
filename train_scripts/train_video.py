@@ -63,6 +63,8 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
     image_logs = []
     latents = []
     
+    validation_pipeline.transformer.eval()
+
     for prompt in validation_prompts:
         if validation_noise is not None:
             z = torch.clone(validation_noise).to(device)
@@ -108,6 +110,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
         save_sample(samples[0], fps=8, save_path=os.path.join(sample_save_pth, prompt))
 
     #model.train()
+    validation_pipeline.transformer.train()
 
     # del vae
     # del tokenizer
