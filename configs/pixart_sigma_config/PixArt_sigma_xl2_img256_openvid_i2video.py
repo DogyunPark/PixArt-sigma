@@ -34,7 +34,7 @@ gradient_clip = 0.01
 #optimizer = dict(type='CAMEWrapper', lr=2e-5, weight_decay=0.0, betas=(0.9, 0.999, 0.9999), eps=(1e-30, 1e-16))
 optimizer = dict(type='AdamWWrapper', lr=1e-4, weight_decay=0.03, betas=(0.9, 0.999))
 lr_schedule_args = dict(num_warmup_steps=1000)
-weight_freeze = "not_temporal_and_lastlayer"
+weight_freeze = "not_temporal_and_xembedder_and_lastlayer"
 #weight_freeze = None
 reparameterization = False
 
