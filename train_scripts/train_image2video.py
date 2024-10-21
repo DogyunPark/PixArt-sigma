@@ -410,7 +410,7 @@ if __name__ == '__main__':
     if config.visualize:
         # preparing embeddings for visualization. We put it here for saving GPU memory
         #validation_prompts = config.validation_prompts
-        filename_list, data_list, validation_prompt = load_data_prompts(config.promptdir, video_size=(config.image_size, config.image_size), video_frames=config.num_frames)
+        filename_list, data_list, validation_prompts = load_data_prompts(config.promptdir, video_size=(config.image_size, config.image_size), video_frames=config.num_frames)
         import pdb; pdb.set_trace()
         skip = True
         Path('output/tmp').mkdir(parents=True, exist_ok=True)
