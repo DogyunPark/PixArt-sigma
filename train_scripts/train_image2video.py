@@ -72,6 +72,15 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
             z = torch.randn(1, 4, config.num_frames, latent_size, latent_size, device=device)
         embed = torch.load(f'output/tmp/{prompt}_{max_length}token.pth', map_location='cpu')
         caption_embs, emb_masks = embed['caption_embeds'].to(device), embed['emb_mask'].to(device)
+        image_embs = embed['video'].to(device)[None]
+        
+        b1, _, t1, h1, w1 = image_embs.shape
+        first_frame_cond = torch.zeros_like(image_embs)
+        first_frame_cond[:,:,0] = image_embs[:,:,0].detach().clone()
+        first_frame_mask = torch.zeros((b1, 1, t1, h1, w1)).to(device, torch.float16)
+        first_frame_mask[:,:,0] = 1.
+        
+        x_cond = torch.cat([first_frame_cond, first_frame_mask], dim=1)
         # caption_embs = caption_embs[:, None]
         # emb_masks = emb_masks[:, None]
         #model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
@@ -86,6 +95,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
             prompt_embeds=caption_embs,
             prompt_embeds_mask=emb_masks,
             uncond_prompt_embeds=null_y,
+            image_embeds=x_cond,
             max_sequence_length=max_length,
             device=device,
             #FlowModel=FlowModel,
@@ -411,7 +421,7 @@ if __name__ == '__main__':
         # preparing embeddings for visualization. We put it here for saving GPU memory
         #validation_prompts = config.validation_prompts
         filename_list, data_list, validation_prompts = load_data_prompts(config.promptdir, video_size=(config.image_size, config.image_size), video_frames=config.num_frames)
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         skip = True
         Path('output/tmp').mkdir(parents=True, exist_ok=True)
         for prompt in validation_prompts:
@@ -449,6 +459,8 @@ if __name__ == '__main__':
                     f'output/tmp/{prompt}_{max_length}token.pth')
                 del txt_tokens
                 del caption_emb
+                del x
+
             null_tokens = tokenizer(
                 "", max_length=max_length, padding="max_length", truncation=True, return_tensors="pt"
             ).to(accelerator.device)
