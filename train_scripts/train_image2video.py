@@ -22,7 +22,7 @@ from einops import rearrange
 from torch.utils.data import RandomSampler
 import random
 
-from diffusion import IDDPM, DPMS, FluxPipeline, FlowMatchEulerDiscreteScheduler
+from diffusion import IDDPM, DPMS, FluxPipelineI2V, FlowMatchEulerDiscreteScheduler
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
 from diffusion.model.builder import build_model
 from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint, load_checkpoint_pixart
@@ -508,7 +508,7 @@ if __name__ == '__main__':
         #logger.warning(f'Unexpected keys: {unexpected}')
     
     # Validation pipeline
-    validation_pipeline = FluxPipeline(scheduler=val_scheduler,
+    validation_pipeline = FluxPipelineI2V(scheduler=val_scheduler,
                                     vae=vae,
                                     text_encoder_2=text_encoder,
                                     tokenizer_2=tokenizer,
