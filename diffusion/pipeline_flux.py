@@ -1422,7 +1422,7 @@ class FluxPipelineI2V(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixi
                 #image_embeds_concat = torch.cat([image_embeds] * 2) if self.do_classifier_free_guidance else image_embeds
                 image_embeds_concat = torch.cat([image_embeds, image_embeds], dim=0) if self.do_classifier_free_guidance else image_embeds
                 latents_model_input = torch.cat([latents_model_input,image_embeds_concat], dim=1)
-                import pdb; pdb.set_trace()
+                #import pdb; pdb.set_trace()
                 # noise_pred = self.transformer(
                 #     hidden_states=latents,
                 #     timestep=timestep / 1000,
