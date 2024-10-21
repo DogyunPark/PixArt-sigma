@@ -1419,7 +1419,8 @@ class FluxPipelineI2V(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixi
                 #timestep = t.expand(latents.shape[0]).to(latents.dtype)
                 timestep = t.expand(latents_model_input.shape[0]).to(latents.device).long()
 
-                image_embeds_concat = torch.cat([image_embeds] * 2) if self.do_classifier_free_guidance else image_embeds
+                #image_embeds_concat = torch.cat([image_embeds] * 2) if self.do_classifier_free_guidance else image_embeds
+                image_embeds_concat = torch.cat([image_embeds, image_embeds], dim=0) if self.do_classifier_free_guidance else image_embeds
                 latents_model_input = torch.cat([latents_model_input,image_embeds_concat], dim=1)
                 # noise_pred = self.transformer(
                 #     hidden_states=latents,
