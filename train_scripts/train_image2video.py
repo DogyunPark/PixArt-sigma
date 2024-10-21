@@ -325,6 +325,7 @@ if __name__ == '__main__':
     args = parse_args()
     #config = read_config(args.config)
     config = Config.fromfile(args.config)
+    config.promptdir = args.promptdir
     if args.work_dir is not None:
         config.work_dir = args.work_dir
     if args.resume_from is not None:
