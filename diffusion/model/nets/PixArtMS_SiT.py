@@ -213,13 +213,13 @@ class STDiT(nn.Module):
         self.initialize_weights()
         self.initialize_temporal()
         if weight_freeze is not None:
-            assert weight_freeze in ["not_temporal", "text", "not_temporal_and_xembedder", "not_temporal_and_lastlayer"]
+            assert weight_freeze in ["not_temporal", "text", "not_temporal_and_xembedder_and_lastlayer", "not_temporal_and_lastlayer"]
             if weight_freeze == "not_temporal":
                 self.freeze_not_temporal()
             elif weight_freeze == "text":
                 self.freeze_text()
-            elif weight_freeze == "not_temporal_and_xembedder":
-                self.freeze_not_temporal_and_xembedder()
+            elif weight_freeze == "not_temporal_and_xembedder_and_lastlayer":
+                self.freeze_not_temporal_and_xembedder_and_lastlayer()
             elif weight_freeze == "not_temporal_and_lastlayer":
                 self.freeze_not_temporal_and_lastlayer()
 
@@ -370,25 +370,38 @@ class STDiT(nn.Module):
             if "attn_temp" not in n:
                 p.requires_grad = False
         
-        for n, p in self.named_parameters():
             if "final_layer" in n:
                 p.requires_grad = True
         
-        for n, p in self.named_parameters():
             if "blocks.27.scale_shift_table" in n:
                 p.requires_grad = True
             
             if "blocks.27.mlp" in n:
                 p.requires_grad = True
     
-    def freeze_not_temporal_and_xembedder(self):
+    def freeze_not_temporal_and_xembedder_and_lastlayer(self):
         for n, p in self.named_parameters():
             if "attn_temp" not in n:
                 p.requires_grad = False
         
-        for n, p in self.named_parameters():
             if "x_embedder" in n:
                 p.requires_grad = True
+    
+            if "final_layer" in n:
+                p.requires_grad = True
+        
+            if "blocks.27.scale_shift_table" in n:
+                p.requires_grad = True
+            
+            if "blocks.27.mlp" in n:
+                p.requires_grad = True
+            
+            if "blocks.0.scale_shift_table" in n:
+                p.requires_grad = True
+            
+            if "blocks.0.mlp" in n:
+                p.requires_grad = True
+
 
     def freeze_text(self):
         for n, p in self.named_parameters():

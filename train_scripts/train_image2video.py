@@ -5,7 +5,6 @@ import sys
 import time
 import types
 import warnings
-import random
 from pathlib import Path
 
 current_file_path = Path(__file__).resolve()
@@ -16,7 +15,6 @@ import torch
 from accelerate import Accelerator, InitProcessGroupKwargs
 from accelerate.utils import DistributedType
 from diffusers.models import AutoencoderKL
-#from diffusers import FlowMatchEulerDiscreteScheduler, FluxPipeline
 from transformers import T5EncoderModel, T5Tokenizer
 from mmcv.runner import LogBuffer
 from PIL import Image
@@ -33,8 +31,10 @@ from diffusion.utils.logger import get_root_logger, rename_file_with_creation_ti
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
+from diffusion.utils.nn import append_dims
 from diffusion.openviddata.datasets import DatasetFromCSV, get_transforms_image, get_transforms_video
 from diffusion.openviddata import save_sample
+from diffusion.model.respace import FlowWrappedModel
 
 from mmengine.config import Config
 
@@ -49,9 +49,8 @@ def set_fsdp_env():
 
 
 @torch.inference_mode()
-def log_validation(model, step, device, vae=None):
+def log_validation(model, step, device, vae, text_encoder, tokenizer, val_scheduler):
     torch.cuda.empty_cache()
-    model = accelerator.unwrap_model(model).eval()
     hw = torch.tensor([[image_size, image_size]], dtype=torch.float, device=device).repeat(1, 1)
     ar = torch.tensor([[1.]], device=device).repeat(1, 1)
     null_y = torch.load(f'output/pretrained_models/null_embed_diffusers_{max_length}token.pth')
@@ -62,6 +61,8 @@ def log_validation(model, step, device, vae=None):
     image_logs = []
     latents = []
     
+    validation_pipeline.transformer.eval()
+
     for prompt in validation_prompts:
         if validation_noise is not None:
             z = torch.clone(validation_noise).to(device)
@@ -74,23 +75,22 @@ def log_validation(model, step, device, vae=None):
         #model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
         model_kwargs = dict(mask=emb_masks)
 
-        dpm_solver = DPMS(model.forward_with_dpmsolver,
-                          condition=caption_embs,
-                          uncondition=null_y,
-                          cfg_scale=4.5,
-                          model_kwargs=model_kwargs)
-        denoised = dpm_solver.sample(
-            z,
-            steps=14,
-            order=2,
-            skip_type="time_uniform",
-            method="multistep",
+        denoised = validation_pipeline(
+            height=config.image_size,
+            width=config.image_size,
+            num_frames=config.num_frames,
+            num_inference_steps=50,
+            guidance_scale=5,
+            prompt_embeds=caption_embs,
+            prompt_embeds_mask=emb_masks,
+            uncond_prompt_embeds=null_y,
+            max_sequence_length=max_length,
+            device=device,
+            #FlowModel=FlowModel,
         )
         latents.append(denoised)
 
     torch.cuda.empty_cache()
-    if vae is None:
-        vae = AutoencoderKL.from_pretrained(config.vae_pretrained).to(accelerator.device).to(torch.float16)
     for prompt, latent in zip(validation_prompts, latents):
         latent = latent.to(torch.float16)
         bs = 2
@@ -107,9 +107,18 @@ def log_validation(model, step, device, vae=None):
         os.makedirs(sample_save_pth, exist_ok=True)
         save_sample(samples[0], fps=8, save_path=os.path.join(sample_save_pth, prompt))
 
-    del vae
-    flush()
-    return image_logs
+    #model.train()
+    validation_pipeline.transformer.train()
+
+    # del vae
+    # del tokenizer
+    # del text_encoder
+    # del validation_pipeline
+    # del model
+    # del FlowModel
+    # flush()
+    #return image_logs
+
 
 def train():
     if config.get('debug_nan', False):
@@ -164,15 +173,6 @@ def train():
                             first_frame_mask = torch.zeros((b1, 1, t1, h1, w1)).to(accelerator.device, torch.float16)
                         
                         x_cond = torch.cat([first_frame_cond, first_frame_mask], dim=1)
-                        
-                        # posterior = vae.encode(batch[0]).latent_dist
-                        # if config.sample_posterior:
-                        #     z = posterior.sample()
-                        # else:
-                        #     z = posterior.mode()
-
-            #clean_images = z * config.scale_factor
-            #data_info = batch[3]
 
             if load_t5_feat:
                 y = batch[1]
@@ -188,10 +188,15 @@ def train():
 
             # Sample a random timestep for each image
             bs = x.shape[0]
-            timesteps = torch.randint(0, config.train_sampling_steps, (bs,), device=accelerator.device).long()
+            dims = x.ndim
+            # Need to plus one in order to satisfy zero-SNR
+            timesteps = torch.randint(0, config.train_sampling_steps+1, (bs,), device=accelerator.device).long()
             noise = torch.randn_like(x)
-            x = scheduler.scale_noise(x, timesteps, noise)
-            target = (x - noise)
+            sigmas = append_dims(timesteps, dims) / config.train_sampling_steps
+            x_noised = sigmas * noise + (1-sigmas) * x
+            target = (noise - x)
+
+            x_noised_concat = torch.cat([x_noised, x_cond], dim=1)
 
             grad_norm = None
             data_time_all += time.time() - data_time_start
@@ -201,8 +206,10 @@ def train():
                 #loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info))
                 #loss_term = train_diffusion.training_losses(model, x, timesteps, model_kwargs=dict(y=y, mask=y_mask, x_cond=x_cond))
                 #loss = loss_term['loss'].mean()
+                pred = model(x_noised_concat, timesteps, y, y_mask)
+                #pred = FlowModel(model, x_noised, timesteps, y=y, mask=y_mask)
 
-                loss = (target - noise) ** 2
+                loss = (target - pred) ** 2
                 loss = loss.mean()
 
                 accelerator.backward(loss)
@@ -225,9 +232,8 @@ def train():
                 log_buffer.average()
 
                 info = f"Step/Epoch [{global_step}/{epoch}][{step + 1}/{len(train_dataloader)}]:total_eta: {eta}, " \
-                    f"epoch_eta:{eta_epoch}, time_all:{t:.3f}, time_data:{t_d:.3f}, lr:{lr:.3e}, "
+                    f"epoch_eta:{eta_epoch}, time_all:{t:.3f}, time_data:{t_d:.3f}, lr:{lr:.3e}, loss:{loss.item():.4f}, "
                 #info += f's:({model.module.h}, {model.module.w}), ' if hasattr(model, 'module') else f's:({model.h}, {model.w}), '
-
                 #info += ', '.join([f"{k}:{v:.4f}" for k, v in log_buffer.output.items()])
                 logger.info(info)
                 last_tic = time.time()
@@ -253,7 +259,12 @@ def train():
             if config.visualize and (global_step % config.eval_sampling_steps == 0 or (step + 1) == 1):
                 accelerator.wait_for_everyone()
                 if accelerator.is_main_process:
-                    log_validation(model, global_step, device=accelerator.device, vae=vae)
+                    #import pdb; pdb.set_trace()
+                    print('Start Evaluation!')
+                    log_validation(model, global_step, device=accelerator.device, vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, val_scheduler=val_scheduler)
+                    #sigmas = np.linspace(1.0, 1 / 1000, 1000)
+                    #scheduler.set_timesteps(simgas=sigmas, device=accelerator.device)
+            accelerator.wait_for_everyone()
 
         if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
             accelerator.wait_for_everyone()
@@ -386,9 +397,10 @@ if __name__ == '__main__':
         tokenizer = T5Tokenizer.from_pretrained(args.pipeline_load_from, subfolder="tokenizer")
         text_encoder = T5EncoderModel.from_pretrained(
             args.pipeline_load_from, subfolder="text_encoder", torch_dtype=torch.float16).to(accelerator.device)
-
+    
     # Scheduler
     scheduler = FlowMatchEulerDiscreteScheduler(**config.noise_scheduler_kwargs)
+    val_scheduler = FlowMatchEulerDiscreteScheduler(**config.noise_scheduler_kwargs)
     logger.info(f"vae scale factor: {config.scale_factor}")
 
     if config.visualize:
@@ -439,15 +451,16 @@ if __name__ == '__main__':
                     "weight_freeze": config.weight_freeze}
 
     # build models
-    train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma, snr=config.snr_loss)
+    #train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma, snr=config.snr_loss)
+    #FlowModel = FlowWrappedModel(config.reparameterization)
     z_latent_size = (config.num_frames, config.image_size // 8, config.image_size // 8)
     #latent_size = vae.get_latent_size(input_size)
     model = build_model(config.model,
                         config.grad_checkpointing,
                         config.get('fp32_attention', False),
                         input_size=z_latent_size,
-                        learn_sigma=learn_sigma,
-                        pred_sigma=pred_sigma,
+                        learn_sigma=False,
+                        pred_sigma=False,
                         in_channels=8+1,
                         **model_kwargs).train()
     
@@ -458,10 +471,18 @@ if __name__ == '__main__':
     if config.load_from is not None:
         # missing, unexpected = load_checkpoint(
         #     config.load_from, model, load_ema=config.get('load_ema', False), max_length=max_length)
-        load_checkpoint_pixart(model, config.load_from, first_layer_ignore=True)
+        load_checkpoint_pixart(model, config.load_from, first_layer_ignore=True, last_layer_ignore=True)
         
         #logger.warning(f'Missing keys: {missing}')
         #logger.warning(f'Unexpected keys: {unexpected}')
+    
+    # Validation pipeline
+    validation_pipeline = FluxPipeline(scheduler=val_scheduler,
+                                    vae=vae,
+                                    text_encoder_2=text_encoder,
+                                    tokenizer_2=tokenizer,
+                                    transformer=model,
+                                )
 
     # prepare for FSDP clip grad norm calculation
     if accelerator.distributed_type == DistributedType.FSDP:
@@ -500,7 +521,21 @@ if __name__ == '__main__':
     if config.get('auto_lr', None):
         lr_scale_ratio = auto_scale_lr(config.train_batch_size * get_world_size() * config.gradient_accumulation_steps,
                                        config.optimizer, **config.auto_lr)
-    optimizer = build_optimizer(model, config.optimizer)
+    
+    
+    #optimizer = build_optimizer(model, config.optimizer)
+
+    trainable_params = [v for k, v in model.named_parameters() if v.requires_grad]
+    trainable_param_names = [k for k, v in model.named_parameters() if v.requires_grad]
+
+    optimizer = torch.optim.AdamW(
+        trainable_params,
+        lr=config.optimizer['lr'],
+        betas=config.optimizer['betas'],
+        weight_decay=config.optimizer['weight_decay'],
+        #eps=adam_epsilon,
+    )
+    
     lr_scheduler = build_lr_scheduler(config, optimizer, train_dataloader, lr_scale_ratio)
 
     timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
@@ -536,4 +571,6 @@ if __name__ == '__main__':
     # objects in the same order you gave them to the prepare method.
     model = accelerator.prepare(model)
     optimizer, train_dataloader, lr_scheduler = accelerator.prepare(optimizer, train_dataloader, lr_scheduler)
+    #scheduler = accelerator.prepare(scheduler)
+    #val_scheduler, validation_pipeline = accelerator.prepare(val_scheduler, validation_pipeline)
     train()
