@@ -1,6 +1,6 @@
 import argparse, os, sys, glob
 import datetime, time
-from omegaconf import OmegaConf
+#from omegaconf import OmegaConf
 from tqdm import tqdm
 from einops import rearrange, repeat
 from collections import OrderedDict
@@ -8,12 +8,7 @@ from collections import OrderedDict
 import torch
 import torchvision
 import torchvision.transforms as transforms
-from pytorch_lightning import seed_everything
 from PIL import Image
-#sys.path.insert(1, os.path.join(sys.path[0], '..', '..'))
-#from lvdm.models.samplers.ddim import DDIMSampler
-#from lvdm.models.samplers.ddim_multiplecond import DDIMSampler as DDIMSampler_multicond
-#from utils.utils import instantiate_from_config
 import random
 
 
@@ -25,6 +20,7 @@ def get_filelist(data_dir, postfixes):
     file_list.sort()
     return file_list
 
+
 def load_prompts(prompt_file):
     f = open(prompt_file, 'r')
     prompt_list = []
@@ -34,6 +30,7 @@ def load_prompts(prompt_file):
             prompt_list.append(l)
         f.close()
     return prompt_list
+
 
 def load_data_prompts(data_dir, video_size=(256,256), video_frames=16, interp=False):
     transform = transforms.Compose([
