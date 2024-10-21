@@ -20,6 +20,7 @@ from mmcv.runner import LogBuffer
 from PIL import Image
 from einops import rearrange
 from torch.utils.data import RandomSampler
+import random
 
 from diffusion import IDDPM, DPMS, FluxPipeline, FlowMatchEulerDiscreteScheduler
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
