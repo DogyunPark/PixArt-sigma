@@ -81,6 +81,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
         first_frame_mask[:,:,0] = 1.
         
         x_cond = torch.cat([first_frame_cond, first_frame_mask], dim=1)
+        import pdb; pdb.set_trace()
         # caption_embs = caption_embs[:, None]
         # emb_masks = emb_masks[:, None]
         #model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
