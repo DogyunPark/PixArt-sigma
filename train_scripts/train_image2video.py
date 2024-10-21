@@ -36,6 +36,7 @@ from diffusion.utils.nn import append_dims
 from diffusion.openviddata.datasets import DatasetFromCSV, get_transforms_image, get_transforms_video
 from diffusion.openviddata import save_sample
 from diffusion.model.respace import FlowWrappedModel
+from diffusion.tools.inference import load_data_prompts
 
 from mmengine.config import Config
 
@@ -291,6 +292,7 @@ def parse_args():
     parser.add_argument('--local-rank', type=int, default=-1)
     parser.add_argument('--local_rank', type=int, default=-1)
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--promptdir', type=str, help='the dir to resume the training')
     parser.add_argument(
         "--pipeline_load_from", default='output/pretrained_models/pixart_sigma_sdxlvae_T5_diffusers',
         type=str, help="Download for loading text_encoder, "
@@ -406,7 +408,9 @@ if __name__ == '__main__':
 
     if config.visualize:
         # preparing embeddings for visualization. We put it here for saving GPU memory
-        validation_prompts = config.validation_prompts
+        #validation_prompts = config.validation_prompts
+        filename_list, data_list, validation_prompt = load_data_prompts(config.promptdir, video_size=(config.image_size, config.image_size), video_frames=config.num_frames)
+        import pdb; pdb.set_trace()
         skip = True
         Path('output/tmp').mkdir(parents=True, exist_ok=True)
         for prompt in validation_prompts:
