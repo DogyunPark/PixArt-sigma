@@ -426,13 +426,24 @@ if __name__ == '__main__':
                 tokenizer = T5Tokenizer.from_pretrained(args.pipeline_load_from, subfolder="tokenizer")
                 text_encoder = T5EncoderModel.from_pretrained(
                     args.pipeline_load_from, subfolder="text_encoder", torch_dtype=torch.float16).to(accelerator.device)
-            for prompt in validation_prompts:
+            for prompt_idx, prompt in enumerate(validation_prompts):
                 txt_tokens = tokenizer(
                     prompt, max_length=max_length, padding="max_length", truncation=True, return_tensors="pt"
                 ).to(accelerator.device)
                 caption_emb = text_encoder(txt_tokens.input_ids, attention_mask=txt_tokens.attention_mask)[0]
+
+                image_data = data_list[prompt_idx].to(accelerator.device)
+                image_data = rearrange(image_data, "C T H W -> T C H W")
+                bs = 2
+                x_out = []
+                for i in range(0, image_data.shape[0], bs):
+                        x_bs = image_data[i : i + bs]
+                        x_bs = vae.encode(x_bs).latent_dist.sample().mul_(config.scale_factor)
+                        x_out.append(x_bs)
+                    x = torch.cat(x_out, dim=0)
+                    x = rearrange(x, "T C H W -> C T H W")
                 torch.save(
-                    {'caption_embeds': caption_emb, 'emb_mask': txt_tokens.attention_mask},
+                    {'caption_embeds': caption_emb, 'emb_mask': txt_tokens.attention_mask, 'video': x.cpu()},
                     f'output/tmp/{prompt}_{max_length}token.pth')
                 del txt_tokens
                 del caption_emb
