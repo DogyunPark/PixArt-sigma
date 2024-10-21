@@ -36,7 +36,7 @@ from diffusion.utils.nn import append_dims
 from diffusion.openviddata.datasets import DatasetFromCSV, get_transforms_image, get_transforms_video
 from diffusion.openviddata import save_sample
 from diffusion.model.respace import FlowWrappedModel
-from diffusion.tools.inference import load_data_prompts
+from tools.inference import load_data_prompts
 
 from mmengine.config import Config
 
