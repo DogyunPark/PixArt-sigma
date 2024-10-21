@@ -437,11 +437,11 @@ if __name__ == '__main__':
                 bs = 2
                 x_out = []
                 for i in range(0, image_data.shape[0], bs):
-                        x_bs = image_data[i : i + bs]
-                        x_bs = vae.encode(x_bs).latent_dist.sample().mul_(config.scale_factor)
-                        x_out.append(x_bs)
-                    x = torch.cat(x_out, dim=0)
-                    x = rearrange(x, "T C H W -> C T H W")
+                    x_bs = image_data[i : i + bs]
+                    x_bs = vae.encode(x_bs).latent_dist.sample().mul_(config.scale_factor)
+                    x_out.append(x_bs)
+                x = torch.cat(x_out, dim=0)
+                x = rearrange(x, "T C H W -> C T H W")
                 torch.save(
                     {'caption_embeds': caption_emb, 'emb_mask': txt_tokens.attention_mask, 'video': x.cpu()},
                     f'output/tmp/{prompt}_{max_length}token.pth')
