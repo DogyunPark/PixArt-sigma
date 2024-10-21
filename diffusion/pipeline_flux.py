@@ -1365,7 +1365,7 @@ class FluxPipelineI2V(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixi
             prompt_embeds = torch.cat([uncond_prompt_embeds, prompt_embeds])
 
         # 4. Prepare latent variables
-        num_channels_latents = self.transformer.in_channels
+        num_channels_latents = self.transformer.out_channels
         #latents, latent_image_ids = self.prepare_latents(
         latents = self.prepare_latents(
             batch_size * num_images_per_prompt,
