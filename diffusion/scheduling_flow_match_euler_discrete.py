@@ -297,9 +297,10 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
         sigma = self.sigmas[self.step_index]
         sigma_next = self.sigmas[self.step_index + 1]
         
-        import pdb; pdb.set_trace()
-        
-        coeff = torch.cat([torch.tensor(list(map(lambda x : ((1+torch.log(torch.tensor(idx+1)))* x**(1/2*torch.log(torch.tensor(idx+1)))).item(), sigma)))[...,None,None,None,None] for idx in range(t)], dim=2).to(sample.device)
+        #import pdb; pdb.set_trace()
+
+        #coeff = torch.cat([torch.tensor(list(map(lambda x : ((1+torch.log(torch.tensor(idx+1)))* x**(1/2*torch.log(torch.tensor(idx+1)))).item(), sigma)))[...,None,None,None,None] for idx in range(t)], dim=2).to(sample.device)
+        coeff = torch.cat([torch.tensor(list(map(lambda x : ((1+torch.log(torch.tensor(idx+1)))* x**(1/2*torch.log(torch.tensor(idx+1)))).item(), [sigma])))[...,None,None,None,None] for idx in range(t)], dim=2).to(sample.device)
         coeff = coeff.repeat(1, 4, 1, 1, 1)
 
         prev_sample = sample + (sigma_next - sigma) * coeff * model_output
