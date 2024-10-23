@@ -307,6 +307,8 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
 
         coeff3 = coeff2 - coeff
 
+        import pdb; pdb.set_trace()
+
         #prev_sample = sample + (sigma_next - sigma) *  model_output
         prev_sample = sample + coeff3 * model_output
 
