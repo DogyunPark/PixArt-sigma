@@ -305,9 +305,10 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
         coeff = coeff.repeat(1, 4, 1, 1, 1)
         coeff2 = coeff2.repeat(1, 4, 1, 1, 1)
 
-        coeff3 = coeff - coeff2
+        coeff3 = coeff2 - coeff
 
-        prev_sample = sample + (sigma_next - sigma) * coeff3 * model_output
+        #prev_sample = sample + (sigma_next - sigma) *  model_output
+        prev_sample = sample + coeff3 * model_output
 
         # Cast sample back to model compatible dtype
         prev_sample = prev_sample.to(model_output.dtype)
