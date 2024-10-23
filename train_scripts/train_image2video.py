@@ -205,7 +205,12 @@ def train():
             # Need to plus one in order to satisfy zero-SNR
             timesteps = torch.randint(0, config.train_sampling_steps+1, (bs,), device=accelerator.device).long()
             noise = torch.randn_like(x)
-            sigmas = append_dims(timesteps, dims) / config.train_sampling_steps
+            
+            # Per-frame flow path
+            sigmas = torch.cat([torch.tensor(list(map(lambda x : (x**(1+1/2*torch.log(torch.tensor(idx+1)))).item(), timesteps)))[...,None,None,None,None] for idx in range(config.num_frames)], dim=2).to(accelerator.device)
+            sigmas = sigmas.repeat(1, 4, 1, 1, 1)
+
+            #sigmas = append_dims(timesteps, dims) / config.train_sampling_steps
             x_noised = sigmas * noise + (1-sigmas) * x
             target = (noise - x)
 
