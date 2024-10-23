@@ -208,7 +208,7 @@ def train():
             
             # Per-frame flow path
             rescaled_timesteps = timesteps / config.train_sampling_steps
-            sigmas = torch.cat([torch.tensor(list(map(lambda x : (1-x**(1+1/2*torch.log(torch.tensor(idx+1)))).item(), rescale_timesteps)))[...,None,None,None,None] for idx in range(config.num_frames)], dim=2).to(accelerator.device)
+            sigmas = torch.cat([torch.tensor(list(map(lambda x : (1-x**(1+1/2*torch.log(torch.tensor(idx+1)))).item(), rescaled_timesteps)))[...,None,None,None,None] for idx in range(config.num_frames)], dim=2).to(accelerator.device)
             sigmas = sigmas.repeat(1, 4, 1, 1, 1)
 
             #sigmas = append_dims(timesteps, dims) / config.train_sampling_steps
