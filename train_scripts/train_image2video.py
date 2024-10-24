@@ -21,6 +21,7 @@ from PIL import Image
 from einops import rearrange
 from torch.utils.data import RandomSampler
 import random
+from ema_pytorch import EMA
 
 from diffusion import IDDPM, DPMS, FluxPipelineI2V, FlowMatchEulerDiscreteScheduler
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
