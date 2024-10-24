@@ -243,8 +243,8 @@ def train():
                 optimizer.step()
                 lr_scheduler.step()
             
-            if accelerator.is_main_process:
-                ema.update()
+            # if accelerator.is_main_process:
+            #     ema.update()
 
             lr = lr_scheduler.get_last_lr()[0]
             logs = {args.loss_report_name: accelerator.gather(loss).mean().item()}
@@ -281,7 +281,7 @@ def train():
                                     epoch=epoch,
                                     step=global_step,
                                     model=accelerator.unwrap_model(model),
-                                    mode_ema=ema.ema_model,
+                                    #mode_ema=ema.ema_model,
                                     optimizer=optimizer,
                                     lr_scheduler=lr_scheduler
                                     )
@@ -610,17 +610,17 @@ if __name__ == '__main__':
     # There is no specific order to remember, you just need to unpack the
     # objects in the same order you gave them to the prepare method.
 
-    if accelerator.is_main_process:
-        ema = EMA(model, beta=0.9999, update_every=1)
-        ema.to(accelerator.device)
+    # if accelerator.is_main_process:
+    #     ema = EMA(model, beta=0.9999, update_every=1)
+    #     ema.to(accelerator.device)
     
         # Validation pipeline
-        validation_pipeline = FluxPipelineI2V(scheduler=val_scheduler,
-                                        vae=vae,
-                                        text_encoder_2=text_encoder,
-                                        tokenizer_2=tokenizer,
-                                        transformer=ema.ema_model,
-                                    )
+    validation_pipeline = FluxPipelineI2V(scheduler=val_scheduler,
+                                    vae=vae,
+                                    text_encoder_2=text_encoder,
+                                    tokenizer_2=tokenizer,
+                                    transformer=model,
+                                )
 
     model = accelerator.prepare(model)
     optimizer, train_dataloader, lr_scheduler = accelerator.prepare(optimizer, train_dataloader, lr_scheduler)
