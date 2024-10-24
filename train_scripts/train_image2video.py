@@ -79,8 +79,12 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
         first_frame_cond[:,:,0] = image_embs[:,:,0].detach().clone()
         first_frame_mask = torch.zeros((b1, 1, t1, h1, w1)).to(device, torch.float16)
         first_frame_mask[:,:,0] = 1.
+
+        first_frame_cond_null = torch.zeros_like(image_embs)
+        first_frame_mask_null = torch.zeros((b1, 1, t1, h1, w1)).to(device, torch.float16)
         
         x_cond = torch.cat([first_frame_cond, first_frame_mask], dim=1)
+        x_cond_null = torch.cat([first_frame_cond_null, first_frame_mask_null], dim=1)
         #import pdb; pdb.set_trace()
         # caption_embs = caption_embs[:, None]
         # emb_masks = emb_masks[:, None]
@@ -97,6 +101,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
             prompt_embeds_mask=emb_masks,
             uncond_prompt_embeds=null_y,
             image_embeds=x_cond,
+            image_embeds_null=x_cond_null,
             max_sequence_length=max_length,
             device=device,
             #FlowModel=FlowModel,
@@ -236,6 +241,9 @@ def train():
                     grad_norm = accelerator.clip_grad_norm_(model.parameters(), config.gradient_clip)
                 optimizer.step()
                 lr_scheduler.step()
+            
+            if accelerator.is_main_process:
+                ema.update()
 
             lr = lr_scheduler.get_last_lr()[0]
             logs = {args.loss_report_name: accelerator.gather(loss).mean().item()}
@@ -272,6 +280,7 @@ def train():
                                     epoch=epoch,
                                     step=global_step,
                                     model=accelerator.unwrap_model(model),
+                                    mode_ema=ema.ema_model
                                     optimizer=optimizer,
                                     lr_scheduler=lr_scheduler
                                     )
@@ -513,14 +522,6 @@ if __name__ == '__main__':
         
         #logger.warning(f'Missing keys: {missing}')
         #logger.warning(f'Unexpected keys: {unexpected}')
-    
-    # Validation pipeline
-    validation_pipeline = FluxPipelineI2V(scheduler=val_scheduler,
-                                    vae=vae,
-                                    text_encoder_2=text_encoder,
-                                    tokenizer_2=tokenizer,
-                                    transformer=model,
-                                )
 
     # prepare for FSDP clip grad norm calculation
     if accelerator.distributed_type == DistributedType.FSDP:
@@ -607,6 +608,19 @@ if __name__ == '__main__':
     # Prepare everything
     # There is no specific order to remember, you just need to unpack the
     # objects in the same order you gave them to the prepare method.
+
+    if accelerator.is_main_process:
+        ema = EMA(model, beta=0.9999, update_every=1)
+        ema.to(accelerator.device)
+    
+        # Validation pipeline
+        validation_pipeline = FluxPipelineI2V(scheduler=val_scheduler,
+                                        vae=vae,
+                                        text_encoder_2=text_encoder,
+                                        tokenizer_2=tokenizer,
+                                        transformer=ema.ema_model,
+                                    )
+
     model = accelerator.prepare(model)
     optimizer, train_dataloader, lr_scheduler = accelerator.prepare(optimizer, train_dataloader, lr_scheduler)
     #scheduler = accelerator.prepare(scheduler)

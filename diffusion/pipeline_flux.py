@@ -1229,6 +1229,7 @@ class FluxPipelineI2V(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixi
         pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
         uncond_prompt_embeds: Optional[torch.FloatTensor] = None,
         image_embeds: Optional[torch.FloatTensor] = None,
+        image_embeds_null: Optional[torch.FloatTensor] = None,
         output_type: Optional[str] = "pil",
         return_dict: bool = True,
         joint_attention_kwargs: Optional[Dict[str, Any]] = None,
@@ -1420,7 +1421,10 @@ class FluxPipelineI2V(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixi
                 timestep = t.expand(latents_model_input.shape[0]).to(latents.device).long()
 
                 #image_embeds_concat = torch.cat([image_embeds] * 2) if self.do_classifier_free_guidance else image_embeds
-                image_embeds_concat = torch.cat([image_embeds, image_embeds], dim=0) if self.do_classifier_free_guidance else image_embeds
+                if image_embeds_null is not None:
+                    image_embeds_concat = torch.cat([image_embeds_null, image_embeds], dim=0) if self.do_classifier_free_guidance else image_embeds    
+                else:
+                    image_embeds_concat = torch.cat([image_embeds, image_embeds], dim=0) if self.do_classifier_free_guidance else image_embeds
                 latents_model_input = torch.cat([latents_model_input,image_embeds_concat], dim=1)
                 #import pdb; pdb.set_trace()
                 # noise_pred = self.transformer(
