@@ -40,7 +40,7 @@ reparameterization = False
 
 eval_sampling_steps = 250
 visualize = True
-log_interval = 20
+log_interval = 10
 save_model_epochs = 5
 save_model_steps = 2500
 work_dir = 'output/debug'

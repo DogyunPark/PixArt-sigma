@@ -280,7 +280,7 @@ def train():
                                     epoch=epoch,
                                     step=global_step,
                                     model=accelerator.unwrap_model(model),
-                                    mode_ema=ema.ema_model
+                                    mode_ema=ema.ema_model,
                                     optimizer=optimizer,
                                     lr_scheduler=lr_scheduler
                                     )
