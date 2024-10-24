@@ -43,7 +43,7 @@ eval_sampling_steps = 250
 visualize = True
 log_interval = 20
 save_model_epochs = 5
-save_model_steps = 2500
+save_model_steps = 1000
 work_dir = 'output/debug'
 
 # pixart-sigma
