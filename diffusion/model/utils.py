@@ -45,30 +45,30 @@ def auto_grad_checkpoint(module, *args, **kwargs):
     return module(*args, **kwargs)
 
 
-def checkpoint_sequential(functions, step, input, *args, **kwargs):
+# def checkpoint_sequential(functions, step, input, *args, **kwargs):
 
-    # Hack for keyword-only parameter in a python 2.7-compliant way
-    preserve = kwargs.pop('preserve_rng_state', True)
-    if kwargs:
-        raise ValueError("Unexpected keyword arguments: " + ",".join(arg for arg in kwargs))
+#     # Hack for keyword-only parameter in a python 2.7-compliant way
+#     preserve = kwargs.pop('preserve_rng_state', True)
+#     if kwargs:
+#         raise ValueError("Unexpected keyword arguments: " + ",".join(arg for arg in kwargs))
 
-    def run_function(start, end, functions):
-        def forward(input):
-            for j in range(start, end + 1):
-                input = functions[j](input, *args)
-            return input
-        return forward
+#     def run_function(start, end, functions):
+#         def forward(input):
+#             for j in range(start, end + 1):
+#                 input = functions[j](input, *args)
+#             return input
+#         return forward
 
-    if isinstance(functions, torch.nn.Sequential):
-        functions = list(functions.children())
+#     if isinstance(functions, torch.nn.Sequential):
+#         functions = list(functions.children())
 
-    # the last chunk has to be non-volatile
-    end = -1
-    segment = len(functions) // step
-    for start in range(0, step * (segment - 1), step):
-        end = start + step - 1
-        input = checkpoint(run_function(start, end, functions), input, preserve_rng_state=preserve)
-    return run_function(end + 1, len(functions) - 1, functions)(input)
+#     # the last chunk has to be non-volatile
+#     end = -1
+#     segment = len(functions) // step
+#     for start in range(0, step * (segment - 1), step):
+#         end = start + step - 1
+#         input = checkpoint(run_function(start, end, functions), input, preserve_rng_state=preserve)
+#     return run_function(end + 1, len(functions) - 1, functions)(input)
 
 
 def window_partition(x, window_size):
