@@ -23,7 +23,7 @@ from torch.utils.data import RandomSampler
 import random
 from ema_pytorch import EMA
 
-from diffusion import IDDPM, DPMS, FluxPipelineI2V, FluxPipelineI2V_original, FlowMatchEulerDiscreteScheduler
+from diffusion import IDDPM, DPMS, FluxPipelineI2V, FlowMatchEulerDiscreteScheduler
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
 from diffusion.model.builder import build_model
 from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint, load_checkpoint_pixart
