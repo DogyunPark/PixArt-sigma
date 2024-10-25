@@ -198,12 +198,13 @@ def train():
                 y_mask = batch[2]
             else:
                 with torch.no_grad():
-                    txt_tokens = tokenizer(
-                        y, max_length=max_length, padding="max_length", truncation=True, return_tensors="pt"
-                    ).to(accelerator.device)
-                    y = text_encoder(
-                        txt_tokens.input_ids, attention_mask=txt_tokens.attention_mask)[0][:, None]
-                    y_mask = txt_tokens.attention_mask[:, None, None]
+                    with torch.cuda.amp.autocast(enabled=(config.mixed_precision == 'fp16' or config.mixed_precision == 'bf16')):
+                        txt_tokens = tokenizer(
+                            y, max_length=max_length, padding="max_length", truncation=True, return_tensors="pt"
+                        ).to(accelerator.device)
+                        y = text_encoder(
+                            txt_tokens.input_ids, attention_mask=txt_tokens.attention_mask)[0][:, None]
+                        y_mask = txt_tokens.attention_mask[:, None, None]
 
             #import pdb; pdb.set_trace()
             # Sample a random timestep for each image
