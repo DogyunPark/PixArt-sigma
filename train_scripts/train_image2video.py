@@ -205,6 +205,7 @@ def train():
                         txt_tokens.input_ids, attention_mask=txt_tokens.attention_mask)[0][:, None]
                     y_mask = txt_tokens.attention_mask[:, None, None]
 
+            import pdb; pdb.set_trace()
             # Sample a random timestep for each image
             bs = x.shape[0]
             dims = x.ndim
