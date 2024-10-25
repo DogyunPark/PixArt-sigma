@@ -94,7 +94,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
             width=config.image_size,
             num_frames=config.num_frames,
             num_inference_steps=50,
-            guidance_scale=5,
+            guidance_scale=7.5,
             prompt_embeds=caption_embs,
             prompt_embeds_mask=emb_masks,
             uncond_prompt_embeds=null_y,
@@ -350,13 +350,6 @@ if __name__ == '__main__':
             accelerator.init_trackers(f"tb_{timestamp}")
 
     validation_pipeline = FluxPipelineI2V(scheduler=val_scheduler,
-                                    vae=vae,
-                                    text_encoder_2=text_encoder,
-                                    tokenizer_2=tokenizer,
-                                    transformer=model,
-                                )
-    
-    validation_pipeline_original = FluxPipelineI2V_original(scheduler=val_scheduler,
                                     vae=vae,
                                     text_encoder_2=text_encoder,
                                     tokenizer_2=tokenizer,
