@@ -499,7 +499,10 @@ class MVDiT(nn.Module):
         # Zero-out output layers:
         nn.init.constant_(self.final_layer.linear.weight, 0)
         nn.init.constant_(self.final_layer.linear.bias, 0)
-
+        
+    @property
+    def dtype(self):
+        return next(self.parameters()).dtype
 
 @MODELS.register_module("MVDiT-XL/2")
 def MVDiT_XL_2(from_pretrained=None, del_y_embedder=False, **kwargs):
