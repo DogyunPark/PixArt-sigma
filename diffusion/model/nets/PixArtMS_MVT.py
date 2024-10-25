@@ -319,7 +319,7 @@ class MVDiT(nn.Module):
             if mask.shape[0] != y.shape[0]:
                 mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
             y = y.repeat(1, self.num_temporal, 1, 1)  # B T L C
-            mask = mask.unsqueeze(1).repeat(1, self.num_temporal, 1)  # B T L
+            mask = mask.squeeze(1).repeat(1, self.num_temporal, 1)  # B T L
         else:
             y_lens = [y.shape[2]] * y.shape[0]
             y = y.squeeze(1).view(1, -1, x.shape[-1])
