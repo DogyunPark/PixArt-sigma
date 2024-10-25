@@ -1363,7 +1363,7 @@ class FluxPipelineI2V(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixi
             )
 
         if self.do_classifier_free_guidance:
-            prompt_embeds = torch.cat([uncond_prompt_embeds, prompt_embeds])
+            prompt_embeds = torch.cat([uncond_prompt_embeds, uncond_prompt_embeds, prompt_embeds])
 
         # 4. Prepare latent variables
         num_channels_latents = self.transformer.out_channels
@@ -1414,7 +1414,7 @@ class FluxPipelineI2V(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixi
                 if self.interrupt:
                     continue
 
-                latents_model_input = torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
+                latents_model_input = torch.cat([latents] * 3) if self.do_classifier_free_guidance else latents
                 
                 # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
                 #timestep = t.expand(latents.shape[0]).to(latents.dtype)
@@ -1422,7 +1422,7 @@ class FluxPipelineI2V(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixi
 
                 #image_embeds_concat = torch.cat([image_embeds] * 2) if self.do_classifier_free_guidance else image_embeds
                 if image_embeds_null is not None:
-                    image_embeds_concat = torch.cat([image_embeds_null, image_embeds], dim=0) if self.do_classifier_free_guidance else image_embeds    
+                    image_embeds_concat = torch.cat([image_embeds_null, image_embeds, image_embeds], dim=0) if self.do_classifier_free_guidance else image_embeds    
                 else:
                     image_embeds_concat = torch.cat([image_embeds, image_embeds], dim=0) if self.do_classifier_free_guidance else image_embeds
                 latents_model_input = torch.cat([latents_model_input,image_embeds_concat], dim=1)
@@ -1449,9 +1449,13 @@ class FluxPipelineI2V(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixi
                     mask=prompt_embeds_mask,
                 )
 
+                # if self.do_classifier_free_guidance:
+                #     noise_pred_uncond, noise_pred_cond = noise_pred.chunk(2)
+                #     noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
+                
                 if self.do_classifier_free_guidance:
-                    noise_pred_uncond, noise_pred_cond = noise_pred.chunk(2)
-                    noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
+                    noise_pred_uncond, noise_pred_cond_image, noise_pred_cond_textimage = noise_pred.chunk(3)
+                    noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond_textimage - noise_pred_cond_image) + 2 * (noise_pred_cond_image - noise_pred_uncond)
 
                 # compute the previous noisy sample x_t -> x_t-1
                 latents_dtype = latents.dtype
