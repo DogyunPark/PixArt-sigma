@@ -41,7 +41,7 @@ class MVDiTBlock(nn.Module):
         drop_path=0.0,
         enable_flashattn=False,
         enable_layernorm_kernel=False,
-        enable_sequence_parallelism=False,
+        #enable_sequence_parallelism=False,
     ):
         super().__init__()
         self.hidden_size = hidden_size
@@ -191,7 +191,7 @@ class MVDiT(nn.Module):
         model_max_length=120,
         dtype=torch.float32,
         space_scale=1.0,
-        time_scale=1.0,
+        time_scale=1.0,F
         weight_freeze=None,
         enable_flashattn=True,
         enable_layernorm_kernel=True,
