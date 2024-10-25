@@ -189,7 +189,7 @@ class MVDiT(nn.Module):
         no_temporal_pos_emb=False,
         caption_channels=4096,
         model_max_length=120,
-        dtype=torch.float32,
+        #dtype=torch.float32,
         space_scale=1.0,
         time_scale=1.0,
         weight_freeze=None,
@@ -211,7 +211,7 @@ class MVDiT(nn.Module):
         self.num_temporal = input_size[0] // patch_size[0]
         self.num_spatial = num_patches // self.num_temporal
         self.num_heads = num_heads
-        self.dtype = dtype
+        #self.dtype = dtype
         self.no_temporal_pos_emb = no_temporal_pos_emb
         self.depth = depth
         self.mlp_ratio = mlp_ratio
