@@ -193,7 +193,7 @@ class MVDiT(nn.Module):
         no_temporal_pos_emb=False,
         caption_channels=4096,
         model_max_length=120,
-        dtype=torch.float16,
+        dtype=torch.bfloat16,
         space_scale=1.0,
         time_scale=1.0,
         weight_freeze=None,
