@@ -357,5 +357,5 @@ if __name__ == '__main__':
                                 )
 
     model = accelerator.prepare(model)
-    global_step = 'EVAL'
+    global_step = 'EVAL_256'
     log_validation(model, global_step, device=accelerator.device, vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, val_scheduler=val_scheduler)
