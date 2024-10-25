@@ -191,7 +191,7 @@ class MVDiT(nn.Module):
         model_max_length=120,
         dtype=torch.float32,
         space_scale=1.0,
-        time_scale=1.0,F
+        time_scale=1.0,
         weight_freeze=None,
         enable_flashattn=True,
         enable_layernorm_kernel=True,
