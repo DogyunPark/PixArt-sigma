@@ -46,7 +46,7 @@ class MVDiTBlock(nn.Module):
         super().__init__()
         self.hidden_size = hidden_size
         self.enable_flashattn = enable_flashattn
-        self._enable_sequence_parallelism = enable_sequence_parallelism
+        #self._enable_sequence_parallelism = enable_sequence_parallelism
 
         # if enable_sequence_parallelism:
         #     self.attn_cls = SeqParallelAttention
@@ -246,7 +246,7 @@ class MVDiT(nn.Module):
                     drop_path=drop_path[i],
                     enable_flashattn=self.enable_flashattn,
                     enable_layernorm_kernel=self.enable_layernorm_kernel,
-                    enable_sequence_parallelism=enable_sequence_parallelism,
+                    #enable_sequence_parallelism=enable_sequence_parallelism,
                     d_t=self.num_temporal,
                     d_s=self.num_spatial,
                 )
