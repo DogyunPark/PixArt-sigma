@@ -1,30 +1,19 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
-
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-# --------------------------------------------------------
-# References:
-# GLIDE: https://github.com/openai/glide-text2im
-# MAE: https://github.com/facebookresearch/mae/blob/main/models_mae.py
-# --------------------------------------------------------
-import torch
-import torch.nn as nn
-#import torch.distributed as dist
 import numpy as np
+import torch
+import torch.distributed as dist
+import torch.nn as nn
+from einops import rearrange
 from timm.models.layers import DropPath
 from timm.models.vision_transformer import Mlp
-from einops import rearrange
 
-from diffusion.model.builder import MODELS
-from diffusion.model.utils import auto_grad_checkpoint, to_2tuple
-#from diffusion.model.nets.PixArt_blocks import t2i_modulate, CaptionEmbedder, AttentionKVCompress, MultiHeadCrossAttention, T2IFinalLayer, TimestepEmbedder, SizeEmbedder
-#from diffusion.model.nets.PixArt import PixArt#, get_2d_sincos_pos_embed
-from diffusion.utils.checkpoint import load_checkpoint_pixart
+from diffusion.model.utils import auto_grad_checkpoint
+#from openvid.acceleration.communications import gather_forward_split_backward, split_forward_gather_backward
+#from openvid.acceleration.parallel_states import get_sequence_parallel_group
 from diffusion.model.layers.blocks import (
     Attention,
+    MaskedSelfAttention,
     CaptionEmbedder,
-    MultiHeadCrossAttention,
+    MaskedMultiHeadCrossAttention,
     PatchEmbed3D,
     #SeqParallelAttention,
     #SeqParallelMultiHeadCrossAttention,
@@ -36,8 +25,12 @@ from diffusion.model.layers.blocks import (
     get_layernorm,
     t2i_modulate,
 )
+from diffusion.model.builder import MODELS
+from diffusion.utils.checkpoint import load_checkpoint_pixart
+import ipdb
 
-class STDiTBlock(nn.Module):
+
+class MVDiTBlock(nn.Module):
     def __init__(
         self,
         hidden_size,
@@ -48,34 +41,45 @@ class STDiTBlock(nn.Module):
         drop_path=0.0,
         enable_flashattn=False,
         enable_layernorm_kernel=False,
-        #enable_sequence_parallelism=False,
+        enable_sequence_parallelism=False,
     ):
         super().__init__()
         self.hidden_size = hidden_size
         self.enable_flashattn = enable_flashattn
-        #self._enable_sequence_parallelism = enable_sequence_parallelism
+        self._enable_sequence_parallelism = enable_sequence_parallelism
 
         # if enable_sequence_parallelism:
         #     self.attn_cls = SeqParallelAttention
         #     self.mha_cls = SeqParallelMultiHeadCrossAttention
-        #else:
+        # else:
+        self.self_masked_attn = MaskedSelfAttention
         self.attn_cls = Attention
-        self.mha_cls = MultiHeadCrossAttention
+        self.mha_cls = MaskedMultiHeadCrossAttention
 
         self.norm1 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
-        self.attn = self.attn_cls(
+        self.norm1_y = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
+        self.norm2 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
+        self.norm2_y = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
+        self.attn = self.self_masked_attn(
             hidden_size,
             num_heads=num_heads,
             qkv_bias=True,
             enable_flashattn=enable_flashattn,
         )
         self.cross_attn = self.mha_cls(hidden_size, num_heads)
-        self.norm2 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
+        self.norm3 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
+        self.norm3_y = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
         self.mlp = Mlp(
+            in_features=hidden_size, hidden_features=int(hidden_size * mlp_ratio), act_layer=approx_gelu, drop=0
+        )
+        self.mlp_y = Mlp(
             in_features=hidden_size, hidden_features=int(hidden_size * mlp_ratio), act_layer=approx_gelu, drop=0
         )
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
+        self.scale_shift_table_y = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
+        self.scale_shift_table_temp = nn.Parameter(torch.randn(3, hidden_size) / hidden_size**0.5)
+        self.scale_shift_table_y_temp = nn.Parameter(torch.randn(3, hidden_size) / hidden_size**0.5)
 
         # temporal attention
         self.d_s = d_s
@@ -94,42 +98,82 @@ class STDiTBlock(nn.Module):
             enable_flashattn=self.enable_flashattn,
         )
 
-    def forward(self, x, y, t, mask=None, tpe=None):
+    def forward(self, x, y, t, t_y, t_tmep, t_y_tmep, mask=None, tpe=None):
         B, N, C = x.shape
+        L = y.shape[2]  # y: B T L C, mask: B T L
+        x = rearrange(x, "B (T S) C -> B T S C", T=self.d_t, S=self.d_s)
+        x_mask = torch.ones(x.shape[:3], device=x.device, dtype=x.dtype)  # B T S
 
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
             self.scale_shift_table[None] + t.reshape(B, 6, -1)
         ).chunk(6, dim=1)
+        shift_msa_y, scale_msa_y, gate_msa_y, shift_mlp_y, scale_mlp_y, gate_mlp_y = (
+            self.scale_shift_table_y[None] + t_y.reshape(B, 6, -1)
+        ).chunk(6, dim=1)
+        shift_msa_temp, scale_msa_temp, gate_msa_temp = (
+            self.scale_shift_table_temp[None] + t_tmep.reshape(B, 3, -1)
+        ).chunk(3, dim=1)
+        shift_msa_y_temp, scale_msa_y_temp, gate_msa_y_temp = (
+            self.scale_shift_table_y_temp[None] + t_y_tmep.reshape(B, 3, -1)
+        ).chunk(3, dim=1)
+
+        x = rearrange(x, "B T S C -> B (T S) C")
+        y = rearrange(y, "B T L C -> B (T L) C")
         x_m = t2i_modulate(self.norm1(x), shift_msa, scale_msa)
-
+        y_m = t2i_modulate(self.norm1_y(y), shift_msa_y, scale_msa_y)
+        x_m = rearrange(x_m, "B (T S) C -> B T S C", T=self.d_t, S=self.d_s)
+        y_m = rearrange(y_m, "B (T L) C -> B T L C", T=self.d_t, L=L)
+        xy_m = torch.cat([x_m, y_m], dim=2)
+        xy_mask = torch.cat([x_mask, mask], dim=2)
+        xy_mask = rearrange(xy_mask, "B T N -> (B T) N")
         # spatial branch
-        x_s = rearrange(x_m, "B (T S) C -> (B T) S C", T=self.d_t, S=self.d_s)
-        x_s = self.attn(x_s)
-        x_s = rearrange(x_s, "(B T) S C -> B (T S) C", T=self.d_t, S=self.d_s)
+        xy_s = rearrange(xy_m, "B T N C -> (B T) N C")
+        xy_s = self.attn(xy_s, xy_mask)
+        xy_s = rearrange(xy_s, "(B T) N C -> B T N C", B=B, T=self.d_t)
+        x_s = xy_s[:, :, :self.d_s, :]
+        y_s = xy_s[:, :, self.d_s:, :]
+        x_s = rearrange(x_s, "B T S C -> B (T S) C")
+        y_s = rearrange(y_s, "B T L C -> B (T L) C")
         x = x + self.drop_path(gate_msa * x_s)
-
+        y = y + self.drop_path(gate_msa_y * y_s)
+        
+        x_t = t2i_modulate(self.norm2(x), shift_msa_temp, scale_msa_temp)
+        y_t = t2i_modulate(self.norm2_y(y), shift_msa_y_temp, scale_msa_y_temp)
+        x_t = rearrange(x_t, "B (T S) C -> B T S C", T=self.d_t, S=self.d_s)
+        y_t = rearrange(y_t, "B (T L) C -> B T L C", T=self.d_t, L=L)
+        xy_t = torch.cat([x_t, y_t], dim=2)
         # temporal branch
-        x_t = rearrange(x, "B (T S) C -> (B S) T C", T=self.d_t, S=self.d_s)
+        xy_t = rearrange(xy_t, "B T N C -> (B N) T C")
         if tpe is not None:
-            x_t = x_t + tpe
-        x_t = self.attn_temp(x_t)
-        x_t = rearrange(x_t, "(B S) T C -> B (T S) C", T=self.d_t, S=self.d_s)
-        x = x + self.drop_path(gate_msa * x_t)
+            xy_t = xy_t + tpe
+        xy_t = self.attn_temp(xy_t)
+        xy_t = rearrange(xy_t, "(B N) T C -> B T N C", B=B, N=self.d_s+L)
+        x_t = xy_t[:, :, :self.d_s, :]
+        y_t = xy_t[:, :, self.d_s:, :]
+        x_t = rearrange(x_t, "B T S C -> B (T S) C")
+        y_t = rearrange(y_t, "B T L C -> B (T L) C")
+        x = x + self.drop_path(gate_msa_temp * x_t)
+        y = y + self.drop_path(gate_msa_y_temp * y_t)
 
+        x = rearrange(x, "B (T S) C -> (B T) S C", T=self.d_t, S=self.d_s)
+        y = rearrange(y, "B (T L) C -> (B T) L C", T=self.d_t, L=L)
+        mask = rearrange(mask, "B T L -> (B T) L")
         # cross attn
         x = x + self.cross_attn(x, y, mask)
 
+        x = rearrange(x, "(B T) S C -> B (T S) C", B=B, T=self.d_t)
+        y = rearrange(y, "(B T) L C -> B (T L) C", B=B, T=self.d_t)
         # mlp
-        x = x + self.drop_path(gate_mlp * self.mlp(t2i_modulate(self.norm2(x), shift_mlp, scale_mlp)))
+        x = x + self.drop_path(gate_mlp * self.mlp(t2i_modulate(self.norm3(x), shift_mlp, scale_mlp)))
+        y = y + self.drop_path(gate_mlp_y * self.mlp_y(t2i_modulate(self.norm3_y(y), shift_mlp_y, scale_mlp_y)))
 
-        return x
+        y = rearrange(y, "B (T L) C -> B T L C", T=self.d_t, L=L)
+
+        return x, y
 
 
-#############################################################################
-#                                 Core PixArt Model                                #
-#################################################################################
 @MODELS.register_module()
-class STDiT(nn.Module):
+class MVDiT(nn.Module):
     def __init__(
         self,
         input_size=(1, 32, 32),
@@ -145,20 +189,18 @@ class STDiT(nn.Module):
         no_temporal_pos_emb=False,
         caption_channels=4096,
         model_max_length=120,
-        #dtype=torch.float32,
-        pe_interpolation=1.0,
+        dtype=torch.float32,
+        space_scale=1.0,
         time_scale=1.0,
         weight_freeze=None,
         enable_flashattn=True,
-        enable_layernorm_kernel=False,
+        enable_layernorm_kernel=True,
         #enable_sequence_parallelism=False,
-        **kwargs,
     ):
         super().__init__()
         self.pred_sigma = pred_sigma
         self.in_channels = in_channels
-        #self.out_channels = in_channels * 2 if pred_sigma else in_channels
-        self.out_channels = 4 * 2 if pred_sigma else 4
+        self.out_channels = in_channels * 2 if pred_sigma else in_channels
         self.hidden_size = hidden_size
         self.patch_size = patch_size
         self.input_size = input_size
@@ -167,13 +209,13 @@ class STDiT(nn.Module):
         self.num_temporal = input_size[0] // patch_size[0]
         self.num_spatial = num_patches // self.num_temporal
         self.num_heads = num_heads
-        #self.dtype = dtype
+        self.dtype = dtype
         self.no_temporal_pos_emb = no_temporal_pos_emb
         self.depth = depth
         self.mlp_ratio = mlp_ratio
         self.enable_flashattn = enable_flashattn
         self.enable_layernorm_kernel = enable_layernorm_kernel
-        self.space_scale = pe_interpolation
+        self.space_scale = space_scale
         self.time_scale = time_scale
 
         self.register_buffer("pos_embed", self.get_spatial_pos_embed())
@@ -182,6 +224,9 @@ class STDiT(nn.Module):
         self.x_embedder = PatchEmbed3D(patch_size, in_channels, hidden_size)
         self.t_embedder = TimestepEmbedder(hidden_size)
         self.t_block = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 6 * hidden_size, bias=True))
+        self.t_block_y = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 6 * hidden_size, bias=True))
+        self.t_block_temp = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 3 * hidden_size, bias=True))
+        self.t_block_y_temp = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 3 * hidden_size, bias=True))
         self.y_embedder = CaptionEmbedder(
             in_channels=caption_channels,
             hidden_size=hidden_size,
@@ -193,14 +238,14 @@ class STDiT(nn.Module):
         drop_path = [x.item() for x in torch.linspace(0, drop_path, depth)]
         self.blocks = nn.ModuleList(
             [
-                STDiTBlock(
+                MVDiTBlock(
                     self.hidden_size,
                     self.num_heads,
                     mlp_ratio=self.mlp_ratio,
                     drop_path=drop_path[i],
                     enable_flashattn=self.enable_flashattn,
                     enable_layernorm_kernel=self.enable_layernorm_kernel,
-                    #enable_sequence_parallelism=enable_sequence_parallelism,
+                    enable_sequence_parallelism=enable_sequence_parallelism,
                     d_t=self.num_temporal,
                     d_s=self.num_spatial,
                 )
@@ -208,7 +253,8 @@ class STDiT(nn.Module):
             ]
         )
         self.final_layer = T2IFinalLayer(hidden_size, np.prod(self.patch_size), self.out_channels)
-
+        
+        
         # init model
         self.initialize_weights()
         self.initialize_temporal()
@@ -232,7 +278,7 @@ class STDiT(nn.Module):
 
     def forward(self, x, timestep, y, mask=None, x_cond=None):
         """
-        Forward pass of STDiT.
+        Forward pass of MVDiT.
         Args:
             x (torch.Tensor): latent representation of video; of shape [B, C, T, H, W]
             timestep (torch.Tensor): diffusion time steps; of shape [B]
@@ -249,8 +295,9 @@ class STDiT(nn.Module):
 
         if x_cond is not None:
             x = torch.cat([x, x_cond], dim=1)
+
         # embedding
-        x = self.x_embedder(x)  # [B, N, C]
+        x = self.x_embedder(x)  # [B, (THW), C]
         x = rearrange(x, "B (T S) C -> B T S C", T=self.num_temporal, S=self.num_spatial)
         x = x + self.pos_embed
         x = rearrange(x, "B T S C -> B (T S) C")
@@ -261,14 +308,16 @@ class STDiT(nn.Module):
 
         t = self.t_embedder(timestep, dtype=x.dtype)  # [B, C]
         t0 = self.t_block(t)  # [B, C]
+        t_y = self.t_block_y(t)
+        t0_tmep = self.t_block_temp(t)  # [B, C]
+        t_y_tmep = self.t_block_y_temp(t)
         y = self.y_embedder(y, self.training)  # [B, 1, N_token, C]
 
         if mask is not None:
             if mask.shape[0] != y.shape[0]:
                 mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
-            mask = mask.squeeze(1).squeeze(1)
-            y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
-            y_lens = mask.sum(dim=1).tolist()
+            y = y.repeat(1, self.num_temporal, 1, 1)  # B T L C
+            mask = mask.unsqueeze(1).repeat(1, self.num_temporal, 1)  # B T L
         else:
             y_lens = [y.shape[2]] * y.shape[0]
             y = y.squeeze(1).view(1, -1, x.shape[-1])
@@ -284,7 +333,7 @@ class STDiT(nn.Module):
                 tpe = self.pos_embed_temporal
             else:
                 tpe = None
-            x = auto_grad_checkpoint(block, x, y, t0, y_lens, tpe)
+            x, y = auto_grad_checkpoint(block, x, y, t0, t_y, t0_tmep, t_y_tmep, mask, tpe)
 
         # if self.enable_sequence_parallelism:
         #     x = gather_forward_split_backward(x, get_sequence_parallel_group(), dim=1, grad_scale="up")
@@ -297,14 +346,6 @@ class STDiT(nn.Module):
         # cast to float32 for better accuracy
         x = x.to(torch.float32)
         return x
-
-    def forward_with_dpmsolver(self, x, timestep, y, **kwargs):
-        """
-        dpm solver donnot need variance prediction
-        """
-        # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
-        model_out = self.forward(x, timestep, y, **kwargs)
-        return model_out.chunk(2, dim=1)[0]
 
     def unpatchify(self, x):
         """
@@ -347,6 +388,15 @@ class STDiT(nn.Module):
             self.hidden_size,
             (grid_size[0] // self.patch_size[1], grid_size[1] // self.patch_size[2]),
             scale=self.space_scale,
+        )
+        pos_embed = torch.from_numpy(pos_embed).float().unsqueeze(0).requires_grad_(False)
+        return pos_embed
+
+    def get_temporal_pos_embed(self):
+        pos_embed = get_1d_sincos_pos_embed(
+            self.hidden_size,
+            self.input_size[0] // self.patch_size[0],
+            scale=self.time_scale,
         )
         pos_embed = torch.from_numpy(pos_embed).float().unsqueeze(0).requires_grad_(False)
         return pos_embed
@@ -431,6 +481,9 @@ class STDiT(nn.Module):
         nn.init.normal_(self.t_embedder.mlp[0].weight, std=0.02)
         nn.init.normal_(self.t_embedder.mlp[2].weight, std=0.02)
         nn.init.normal_(self.t_block[1].weight, std=0.02)
+        nn.init.normal_(self.t_block_y[1].weight, std=0.02)
+        nn.init.normal_(self.t_block_temp[1].weight, std=0.02)
+        nn.init.normal_(self.t_block_y_temp[1].weight, std=0.02)
 
         # Initialize caption embedding MLP:
         nn.init.normal_(self.y_embedder.y_proj.fc1.weight, std=0.02)
@@ -445,13 +498,10 @@ class STDiT(nn.Module):
         nn.init.constant_(self.final_layer.linear.weight, 0)
         nn.init.constant_(self.final_layer.linear.bias, 0)
 
-    @property
-    def dtype(self):
-        return next(self.parameters()).dtype
 
-@MODELS.register_module("STDiT-XL/2")
-def STDiT_XL_2(from_pretrained=None, del_y_embedder=False, **kwargs):
-    model = STDiT(depth=28, hidden_size=1152, patch_size=(1, 2, 2), num_heads=16, **kwargs)
+@MODELS.register_module("MVDiT-XL/2")
+def MVDiT_XL_2(from_pretrained=None, **kwargs):
+    model = MVDiT(depth=28, hidden_size=1152, patch_size=(1, 2, 2), num_heads=16, **kwargs)
     if from_pretrained is not None:
-        load_checkpoint_pixart(model, from_pretrained, del_y_embedder)
+        load_checkpoint_pixart(model, from_pretrained)
     return model
