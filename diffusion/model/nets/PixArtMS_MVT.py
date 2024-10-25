@@ -193,7 +193,7 @@ class MVDiT(nn.Module):
         no_temporal_pos_emb=False,
         caption_channels=4096,
         model_max_length=120,
-        #dtype=torch.float16,
+        dtype=torch.float32,
         space_scale=1.0,
         time_scale=1.0,
         weight_freeze=None,
@@ -215,7 +215,7 @@ class MVDiT(nn.Module):
         self.num_temporal = input_size[0] // patch_size[0]
         self.num_spatial = num_patches // self.num_temporal
         self.num_heads = num_heads
-        #self.dtype = dtype
+        self.dtype = dtype
         self.no_temporal_pos_emb = no_temporal_pos_emb
         self.depth = depth
         self.mlp_ratio = mlp_ratio
@@ -504,9 +504,9 @@ class MVDiT(nn.Module):
         nn.init.constant_(self.final_layer.linear.weight, 0)
         nn.init.constant_(self.final_layer.linear.bias, 0)
 
-    @property
-    def dtype(self):
-        return next(self.parameters()).dtype
+    # @property
+    # def dtype(self):
+    #     return next(self.parameters()).dtype
 
 @MODELS.register_module("MVDiT-XL/2")
 def MVDiT_XL_2(from_pretrained=None, del_y_embedder=False, **kwargs):
