@@ -196,6 +196,7 @@ class MVDiT(nn.Module):
         enable_flashattn=True,
         enable_layernorm_kernel=True,
         #enable_sequence_parallelism=False,
+        **kwargs,
     ):
         super().__init__()
         self.pred_sigma = pred_sigma
@@ -500,8 +501,8 @@ class MVDiT(nn.Module):
 
 
 @MODELS.register_module("MVDiT-XL/2")
-def MVDiT_XL_2(from_pretrained=None, **kwargs):
+def MVDiT_XL_2(from_pretrained=None, del_y_embedder=False, **kwargs):
     model = MVDiT(depth=28, hidden_size=1152, patch_size=(1, 2, 2), num_heads=16, **kwargs)
     if from_pretrained is not None:
-        load_checkpoint_pixart(model, from_pretrained)
+        load_checkpoint_pixart(model, from_pretrained, del_y_embedder)
     return model
