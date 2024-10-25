@@ -23,7 +23,7 @@ from torch.utils.data import RandomSampler
 import random
 from ema_pytorch import EMA
 
-from diffusion import IDDPM, DPMS, FluxPipelineI2V, FluxPipelineI2V_original, FlowMatchEulerDiscreteScheduler
+from diffusion import IDDPM, DPMS, FluxPipelineI2V, FlowMatchEulerDiscreteScheduler_original
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
 from diffusion.model.builder import build_model
 from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint, load_checkpoint_pixart
@@ -244,8 +244,8 @@ if __name__ == '__main__':
             args.pipeline_load_from, subfolder="text_encoder", torch_dtype=torch.float16).to(accelerator.device)
     
     # Scheduler
-    scheduler = FlowMatchEulerDiscreteScheduler(**config.noise_scheduler_kwargs)
-    val_scheduler = FlowMatchEulerDiscreteScheduler(**config.noise_scheduler_kwargs)
+    scheduler = FlowMatchEulerDiscreteScheduler_original(**config.noise_scheduler_kwargs)
+    val_scheduler = FlowMatchEulerDiscreteScheduler_original(**config.noise_scheduler_kwargs)
     logger.info(f"vae scale factor: {config.scale_factor}")
 
     if config.visualize:
@@ -355,14 +355,7 @@ if __name__ == '__main__':
                                     tokenizer_2=tokenizer,
                                     transformer=model,
                                 )
-    
-    validation_pipeline_original = FluxPipelineI2V_original(scheduler=val_scheduler,
-                                    vae=vae,
-                                    text_encoder_2=text_encoder,
-                                    tokenizer_2=tokenizer,
-                                    transformer=model,
-                                )
 
     model = accelerator.prepare(model)
-    global_step = 'EVAL'
+    global_step = 'EVAL_ori'
     log_validation(model, global_step, device=accelerator.device, vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, val_scheduler=val_scheduler)
