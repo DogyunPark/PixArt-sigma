@@ -1455,7 +1455,7 @@ class FluxPipelineI2V(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixi
                 
                 if self.do_classifier_free_guidance:
                     noise_pred_uncond, noise_pred_cond_image, noise_pred_cond_textimage = noise_pred.chunk(3)
-                    noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond_textimage - noise_pred_cond_image) + 1 * (noise_pred_cond_image - noise_pred_uncond)
+                    noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond_textimage - noise_pred_cond_image) + 1.1 * (noise_pred_cond_image - noise_pred_uncond)
 
                 # compute the previous noisy sample x_t -> x_t-1
                 latents_dtype = latents.dtype
