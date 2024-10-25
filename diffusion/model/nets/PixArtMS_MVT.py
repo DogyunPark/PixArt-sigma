@@ -194,7 +194,7 @@ class MVDiT(nn.Module):
         time_scale=1.0,
         weight_freeze=None,
         enable_flashattn=True,
-        enable_layernorm_kernel=True,
+        enable_layernorm_kernel=False,
         #enable_sequence_parallelism=False,
         **kwargs,
     ):
