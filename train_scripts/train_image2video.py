@@ -228,13 +228,14 @@ def train():
             grad_norm = None
             data_time_all += time.time() - data_time_start
             with accelerator.accumulate(model):
-                # Predict the noise residual
-                optimizer.zero_grad()
-                #loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info))
-                #loss_term = train_diffusion.training_losses(model, x, timesteps, model_kwargs=dict(y=y, mask=y_mask, x_cond=x_cond))
-                #loss = loss_term['loss'].mean()
-                pred = model(x_noised_concat, timesteps, y, y_mask)
-                #pred = FlowModel(model, x_noised, timesteps, y=y, mask=y_mask)
+                with torch.cuda.amp.autocast(enabled=(config.mixed_precision == 'fp16' or config.mixed_precision == 'bf16')):
+                    # Predict the noise residual
+                    optimizer.zero_grad()
+                    #loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info))
+                    #loss_term = train_diffusion.training_losses(model, x, timesteps, model_kwargs=dict(y=y, mask=y_mask, x_cond=x_cond))
+                    #loss = loss_term['loss'].mean()
+                    pred = model(x_noised_concat, timesteps, y, y_mask)
+                    #pred = FlowModel(model, x_noised, timesteps, y=y, mask=y_mask)
 
                 loss = (target - pred) ** 2
                 loss = loss.mean()
