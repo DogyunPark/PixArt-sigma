@@ -13,8 +13,8 @@ num_frames = 16
 frame_interval = 3
 
 # model setting
-#model = 'STDiT-XL/2'
-model = 'MVDiT-XL/2'
+model = 'STDiT-XL/2'
+#model = 'MVDiT-XL/2'
 mixed_precision = 'fp16'  # ['fp16', 'fp32', 'bf16']
 fp32_attention = True
 #load_from = "output/pretrained_models/PixArt-Sigma-XL-2-512-MS.pth"  # https://huggingface.co/PixArt-alpha/PixArt-Sigma
