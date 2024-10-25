@@ -29,7 +29,7 @@ pe_interpolation = 0.5
 num_workers = 8
 train_batch_size = 42  # 48 as default
 num_epochs = 200  # 3
-gradient_accumulation_steps = 3
+gradient_accumulation_steps = 2
 grad_checkpointing = True
 gradient_clip = 0.01
 optimizer = dict(type='CAMEWrapper', lr=2e-5, weight_decay=0.0, betas=(0.9, 0.999, 0.9999), eps=(1e-30, 1e-16))
