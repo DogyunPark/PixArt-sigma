@@ -94,7 +94,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
             width=config.image_size,
             num_frames=config.num_frames,
             num_inference_steps=50,
-            guidance_scale=7.5,
+            guidance_scale=3,
             prompt_embeds=caption_embs,
             prompt_embeds_mask=emb_masks,
             uncond_prompt_embeds=null_y,
