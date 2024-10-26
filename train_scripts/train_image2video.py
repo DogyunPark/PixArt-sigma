@@ -97,12 +97,12 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
             width=config.image_size,
             num_frames=config.num_frames,
             num_inference_steps=50,
-            guidance_scale=7.5,
+            guidance_scale=5,
             prompt_embeds=caption_embs,
             prompt_embeds_mask=emb_masks,
             uncond_prompt_embeds=null_y,
             image_embeds=x_cond,
-            image_embeds_null=x_cond_null,
+            #image_embeds_null=x_cond_null,
             max_sequence_length=max_length,
             device=device,
             #FlowModel=FlowModel,
@@ -216,7 +216,7 @@ def train():
             
             # Per-frame flow path
             rescaled_timesteps = timesteps / config.train_sampling_steps
-            sigmas = torch.cat([torch.tensor(list(map(lambda x : (1-x**(1+1/2*torch.log(torch.tensor(idx+1)))).item(), 1-rescaled_timesteps)))[...,None,None,None,None] for idx in range(config.num_frames)], dim=2).to(accelerator.device)
+            sigmas = torch.cat([torch.tensor(list(map(lambda x : (1-x**(1+1/5*torch.log(torch.tensor(idx+1)))).item(), 1-rescaled_timesteps)))[...,None,None,None,None] for idx in range(config.num_frames)], dim=2).to(accelerator.device)
             sigmas = sigmas.repeat(1, 4, 1, 1, 1)
 
             #sigmas = append_dims(timesteps, dims) / config.train_sampling_steps

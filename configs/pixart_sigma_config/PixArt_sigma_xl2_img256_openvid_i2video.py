@@ -17,8 +17,8 @@ model = 'STDiT-XL/2'
 #model = 'MVDiT-XL/2'
 mixed_precision = 'fp16'  # ['fp16', 'fp32', 'bf16']
 fp32_attention = True
-#load_from = "output/pretrained_models/PixArt-Sigma-XL-2-512-MS.pth"  # https://huggingface.co/PixArt-alpha/PixArt-Sigma
-load_from = "output/i2v_perflow/checkpoints/epoch_3_step_7500.pth"  # https://huggingface.co/PixArt-alpha/PixArt-Sigma
+load_from = "output/pretrained_models/PixArt-Sigma-XL-2-512-MS.pth"  # https://huggingface.co/PixArt-alpha/PixArt-Sigma
+#load_from = "output/i2v_perflow/checkpoints/epoch_3_step_7500.pth"  # https://huggingface.co/PixArt-alpha/PixArt-Sigma
 resume_from = None
 vae_pretrained = "output/pretrained_models/pixart_sigma_sdxlvae_T5_diffusers/vae"  # sdxl vae
 aspect_ratio_type = 'ASPECT_RATIO_512'
@@ -35,8 +35,8 @@ gradient_clip = 0.01
 optimizer = dict(type='CAMEWrapper', lr=2e-5, weight_decay=0.0, betas=(0.9, 0.999, 0.9999), eps=(1e-30, 1e-16))
 #optimizer = dict(type='AdamWWrapper', lr=1e-4, weight_decay=0.03, betas=(0.9, 0.999))
 lr_schedule_args = dict(num_warmup_steps=1000)
-#weight_freeze = "not_temporal_and_xembedder_and_lastlayer"
-weight_freeze = None
+weight_freeze = "not_temporal_and_xembedder_and_lastlayer"
+#weight_freeze = None
 reparameterization = False
 
 eval_sampling_steps = 250
@@ -51,7 +51,7 @@ scale_factor = 0.13025
 real_prompt_ratio = 0.5
 model_max_length = 300
 class_dropout_prob = 0.1
-image_dropout_prob = 0.1
+image_dropout_prob = 0.0
 
 # Inference setting
 noise_scheduler_kwargs=dict(num_train_timesteps=1000)
