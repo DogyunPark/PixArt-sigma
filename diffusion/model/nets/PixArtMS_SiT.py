@@ -390,13 +390,13 @@ class STDiT(nn.Module):
             if "final_layer" in n:
                 p.requires_grad = True
         
-            if "blocks.27.scale_shift_table" in n:
+            if "scale_shift_table" in n:
                 p.requires_grad = True
             
             if "blocks.27.mlp" in n:
                 p.requires_grad = True
             
-            if "blocks.0.scale_shift_table" in n:
+            if "scale_shift_table" in n:
                 p.requires_grad = True
             
             if "blocks.0.mlp" in n:
