@@ -1361,7 +1361,8 @@ class FluxPipelineI2V(DiffusionPipeline, FluxLoraLoaderMixin, FromSingleFileMixi
             )
 
         if self.do_classifier_free_guidance:
-            prompt_embeds = torch.cat([uncond_prompt_embeds, uncond_prompt_embeds, prompt_embeds])
+            #prompt_embeds = torch.cat([uncond_prompt_embeds, uncond_prompt_embeds, prompt_embeds])
+            prompt_embeds = torch.cat([uncond_prompt_embeds, prompt_embeds])
 
         # 4. Prepare latent variables
         num_channels_latents = self.transformer.out_channels
