@@ -71,7 +71,7 @@ class STDiTBlock(nn.Module):
         )
         self.cross_attn = self.mha_cls(hidden_size, num_heads)
         self.norm2 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
-        self.mlp = Mlp(
+        self.zmlp = Mlp(
             in_features=hidden_size, hidden_features=int(hidden_size * mlp_ratio), act_layer=approx_gelu, drop=0
         )
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
@@ -393,13 +393,10 @@ class STDiT(nn.Module):
             if "scale_shift_table" in n:
                 p.requires_grad = True
             
-            if "blocks.27.mlp" in n:
+            if "blocks.27" in n:
                 p.requires_grad = True
             
-            if "scale_shift_table" in n:
-                p.requires_grad = True
-            
-            if "blocks.0.mlp" in n:
+            if "blocks.0" in n:
                 p.requires_grad = True
 
 
