@@ -400,7 +400,7 @@ class MaskedMultiHeadCrossAttention(nn.Module):
             exp = -1e9 if attn_bias.dtype == torch.float32 else -1e4
             attn_bias[attn_bias==0] = exp
             attn_bias[attn_bias==1] = 0
-        x = xformers.ops.memory_efficient_attention(q, k, v, p=self.attn_drop.p, attn_bias=attn_bias[:,:,:,attn_bias2.shape[-1]])
+        x = xformers.ops.memory_efficient_attention(q, k, v, p=self.attn_drop.p, attn_bias=attn_bias[:,:,:,:attn_bias2.shape[-1]])
 
         x = x.view(B, -1, C)
         x = self.proj(x)
