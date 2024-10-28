@@ -124,7 +124,7 @@ class MVDiTBlock(nn.Module):
         x_m = rearrange(x_m, "B (T S) C -> B T S C", T=self.d_t, S=self.d_s)
         y_m = rearrange(y_m, "B (T L) C -> B T L C", T=self.d_t, L=L)
         xy_m = torch.cat([x_m, y_m], dim=2)
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         xy_mask = torch.cat([x_mask, mask], dim=2)
         xy_mask = rearrange(xy_mask, "B T N -> (B T) N")
         # spatial branch
@@ -321,7 +321,7 @@ class MVDiT(nn.Module):
         y = self.y_embedder(y, self.training)  # [B, 1, N_token, C]
 
         if mask is not None:
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             if mask.shape[0] != y.shape[0]:
                 mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
             y = y.repeat(1, self.num_temporal, 1, 1)  # B T L C
