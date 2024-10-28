@@ -49,7 +49,7 @@ work_dir = 'output/debug'
 # pixart-sigma
 scale_factor = 0.13025
 real_prompt_ratio = 0.5
-model_max_length = 304
+model_max_length = 300
 class_dropout_prob = 0.1
 image_dropout_prob = 0.0
 
