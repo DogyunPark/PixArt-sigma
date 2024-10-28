@@ -359,7 +359,7 @@ class MultiHeadCrossAttention(nn.Module):
 
         attn_bias = None
         if mask is not None:
-            attn_bias = xformers.ops.fmha.attn_bias.BlockDiagonalMask.from_seqlens([N] * B, mask)
+            attn_bias = xformers.ops.fmha.BlockDiagonalMask.from_seqlens([N] * B, mask)
         x = xformers.ops.memory_efficient_attention(q, k, v, p=self.attn_drop.p, attn_bias=attn_bias)
         #ipdb.set_trace()
 
