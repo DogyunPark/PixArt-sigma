@@ -394,7 +394,7 @@ class MaskedMultiHeadCrossAttention(nn.Module):
 
         attn_bias = None
         if mask is not None:
-            attn_bias = torch.zeros((B, self.num_heads, S, 304)).to(x.device)
+            attn_bias = torch.zeros((B, self.num_heads, S, 304)).to(x.device, torch.float16)
             attn_bias2 = mask.unsqueeze(1).unsqueeze(1).repeat(1, self.num_heads, S, 1).to(q.dtype) # B H S L
             attn_bias[:,:,:,:attn_bias2.shape[-1]] = attn_bias2
             exp = -1e9 if attn_bias.dtype == torch.float32 else -1e4
