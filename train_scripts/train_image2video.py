@@ -72,7 +72,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
         else:
             z = torch.randn(1, 4, config.num_frames, latent_size, latent_size, device=device)
         embed = torch.load(f'output/tmp/{prompt}_{max_length}token.pth', map_location='cpu')
-        caption_embs, emb_masks = embed['caption_embeds'].to(device), embed['emb_mask'].to(device)
+        caption_embs, emb_masks = embed['caption_embeds'].to(device)[:, None], embed['emb_mask'].to(device)[:, None, None]
         image_embs = embed['video'].to(device)[None]
         
         b1, _, t1, h1, w1 = image_embs.shape
