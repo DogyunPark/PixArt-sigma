@@ -121,7 +121,7 @@ def find_model(model_name, first_layer_ignore=False, last_layer_ignore=False):
             if first_layer_ignore:
                 del checkpoint["x_embedder.proj.weight"]
                 del checkpoint["x_embedder.proj.bias"]
-                del checkpoint["y_embedder"]
+                del checkpoint["y_embedder.y_embedding"]
             
             if last_layer_ignore:
                 del checkpoint["final_layer.linear.weight"]
