@@ -320,6 +320,7 @@ class MVDiT(nn.Module):
         y = self.y_embedder(y, self.training)  # [B, 1, N_token, C]
 
         if mask is not None:
+            import pdb; pdb.set_trace()
             if mask.shape[0] != y.shape[0]:
                 mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
             y = y.repeat(1, self.num_temporal, 1, 1)  # B T L C
