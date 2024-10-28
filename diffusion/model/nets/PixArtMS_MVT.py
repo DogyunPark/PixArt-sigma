@@ -124,6 +124,7 @@ class MVDiTBlock(nn.Module):
         x_m = rearrange(x_m, "B (T S) C -> B T S C", T=self.d_t, S=self.d_s)
         y_m = rearrange(y_m, "B (T L) C -> B T L C", T=self.d_t, L=L)
         xy_m = torch.cat([x_m, y_m], dim=2)
+        import pdb; pdb.set_trace()
         xy_mask = torch.cat([x_mask, mask], dim=2)
         xy_mask = rearrange(xy_mask, "B T N -> (B T) N")
         # spatial branch
