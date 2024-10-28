@@ -395,7 +395,7 @@ class MaskedMultiHeadCrossAttention(nn.Module):
         attn_bias = None
         if mask is not None:
             attn_bias = mask.unsqueeze(1).unsqueeze(1).repeat(1, self.num_heads, S, 1).to(q.dtype) # B H S L
-            exp = -1e9
+            exp = -1e9 if attn_bias.dtype == torch.float32 else -1e4
             attn_bias[attn_bias==0] = exp
             attn_bias[attn_bias==1] = 0
         x = xformers.ops.memory_efficient_attention(q, k, v, p=self.attn_drop.p, attn_bias=attn_bias)
