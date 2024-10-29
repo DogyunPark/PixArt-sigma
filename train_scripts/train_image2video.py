@@ -57,7 +57,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
     hw = torch.tensor([[image_size, image_size]], dtype=torch.float, device=device).repeat(1, 1)
     ar = torch.tensor([[1.]], device=device).repeat(1, 1)
     null_y = torch.load(f'output/pretrained_models/null_embed_diffusers_{max_length}token.pth')
-    null_y = null_y['uncond_prompt_embeds'].to(device)[:, None,None]
+    null_y = null_y['uncond_prompt_embeds'].to(device)[:, None]
 
     # Create sampling noise:
     logger.info("Running validation... ")
