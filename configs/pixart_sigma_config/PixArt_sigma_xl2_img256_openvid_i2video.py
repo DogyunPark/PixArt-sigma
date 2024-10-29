@@ -51,7 +51,7 @@ scale_factor = 0.13025
 real_prompt_ratio = 0.5
 model_max_length = 300
 class_dropout_prob = 0.1
-image_dropout_prob = 0.0
+image_dropout_prob = 0.1
 
 # Inference setting
 noise_scheduler_kwargs=dict(num_train_timesteps=1000)
