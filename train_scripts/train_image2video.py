@@ -57,7 +57,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
     hw = torch.tensor([[image_size, image_size]], dtype=torch.float, device=device).repeat(1, 1)
     ar = torch.tensor([[1.]], device=device).repeat(1, 1)
     null_y = torch.load(f'output/pretrained_models/null_embed_diffusers_{max_length}token.pth')
-    null_y = null_y['uncond_prompt_embeds'].to(device)[:, None]
+    null_y = null_y['uncond_prompt_embeds'].to(device)[:, None,None]
 
     # Create sampling noise:
     logger.info("Running validation... ")
@@ -215,11 +215,11 @@ def train():
             noise = torch.randn_like(x)
             
             # Per-frame flow path
-            # rescaled_timesteps = timesteps / config.train_sampling_steps
-            # sigmas = torch.cat([torch.tensor(list(map(lambda x : (1-x**(1+1/5*torch.log(torch.tensor(idx+1)))).item(), 1-rescaled_timesteps)))[...,None,None,None,None] for idx in range(config.num_frames)], dim=2).to(accelerator.device)
-            # sigmas = sigmas.repeat(1, 4, 1, 1, 1)
+            rescaled_timesteps = timesteps / config.train_sampling_steps
+            sigmas = torch.cat([torch.tensor(list(map(lambda x : (1-x**(1+1/5*torch.log(torch.tensor(idx+1)))).item(), 1-rescaled_timesteps)))[...,None,None,None,None] for idx in range(config.num_frames)], dim=2).to(accelerator.device)
+            sigmas = sigmas.repeat(1, 4, 1, 1, 1)
 
-            sigmas = append_dims(timesteps, dims) / config.train_sampling_steps
+            #sigmas = append_dims(timesteps, dims) / config.train_sampling_steps
             x_noised = sigmas * noise + (1-sigmas) * x
             target = (noise - x)
 
