@@ -78,11 +78,11 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
         b1, _, t1, h1, w1 = image_embs.shape
         first_frame_cond = torch.zeros_like(image_embs)
         first_frame_cond[:,:,0] = image_embs[:,:,0].detach().clone()
-        first_frame_mask = torch.zeros((b1, 1, t1, h1, w1)).to(device, torch.float16)
+        first_frame_mask = torch.zeros((b1, 1, t1, h1, w1)).to(device)
         first_frame_mask[:,:,0] = 1.
 
         first_frame_cond_null = torch.zeros_like(image_embs)
-        first_frame_mask_null = torch.zeros((b1, 1, t1, h1, w1)).to(device, torch.float16)
+        first_frame_mask_null = torch.zeros((b1, 1, t1, h1, w1)).to(device)
         
         x_cond = torch.cat([first_frame_cond, first_frame_mask], dim=1)
         x_cond_null = torch.cat([first_frame_cond_null, first_frame_mask_null], dim=1)
@@ -111,7 +111,7 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
 
     torch.cuda.empty_cache()
     for prompt, latent in zip(validation_prompts, latents):
-        latent = latent.to(torch.float16)
+        #latent = latent.to()
         bs = 2
         B = latent.shape[0]
         x = rearrange(latent, "B C T H W -> (B T) C H W")
@@ -159,7 +159,7 @@ def train():
         #for step, batch in enumerate(train_dataloader):
         for step in range(num_steps_per_epoch):
             batch = next(train_dataloader_iter)
-            x = batch["video"].to(accelerator.device, torch.float16)  # [B, C, T, H, W]
+            x = batch["video"].to(accelerator.device)  # [B, C, T, H, W]
             y = batch["text"]
             if step < skip_step:
                 global_step += 1
@@ -185,11 +185,11 @@ def train():
                         if p > config.image_dropout_prob:
                             first_frame_cond = torch.zeros_like(x)
                             first_frame_cond[:,:,0] = x[:,:,0].detach().clone()
-                            first_frame_mask = torch.zeros((b1, 1, t1, h1, w1)).to(accelerator.device, torch.float16)
+                            first_frame_mask = torch.zeros((b1, 1, t1, h1, w1)).to(accelerator.device)
                             first_frame_mask[:,:,0] = 1.
                         else:
                             first_frame_cond = torch.zeros_like(x)
-                            first_frame_mask = torch.zeros((b1, 1, t1, h1, w1)).to(accelerator.device, torch.float16)
+                            first_frame_mask = torch.zeros((b1, 1, t1, h1, w1)).to(accelerator.device)
                         
                         x_cond = torch.cat([first_frame_cond, first_frame_mask], dim=1)
 
