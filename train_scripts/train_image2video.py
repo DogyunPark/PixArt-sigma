@@ -92,33 +92,35 @@ def log_validation(model, step, device, vae, text_encoder, tokenizer, val_schedu
         #model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
         model_kwargs = dict(mask=emb_masks)
 
-        denoised = validation_pipeline(
-            height=config.image_size,
-            width=config.image_size,
-            num_frames=config.num_frames,
-            num_inference_steps=50,
-            guidance_scale=5,
-            prompt_embeds=caption_embs,
-            prompt_embeds_mask=emb_masks,
-            uncond_prompt_embeds=null_y,
-            image_embeds=x_cond,
-            #image_embeds_null=x_cond_null,
-            max_sequence_length=max_length,
-            device=device,
-            #FlowModel=FlowModel,
-        )
+        with accelerator.autocast():
+            denoised = validation_pipeline(
+                height=config.image_size,
+                width=config.image_size,
+                num_frames=config.num_frames,
+                num_inference_steps=50,
+                guidance_scale=5,
+                prompt_embeds=caption_embs,
+                prompt_embeds_mask=emb_masks,
+                uncond_prompt_embeds=null_y,
+                image_embeds=x_cond,
+                #image_embeds_null=x_cond_null,
+                max_sequence_length=max_length,
+                device=device,
+                #FlowModel=FlowModel,
+            )
         latents.append(denoised)
 
     torch.cuda.empty_cache()
     for prompt, latent in zip(validation_prompts, latents):
-        #latent = latent.to()
+        #latent = latent.to(torch.float16)
         bs = 2
         B = latent.shape[0]
         x = rearrange(latent, "B C T H W -> (B T) C H W")
         x_out = []
         for i in range(0, x.shape[0], bs):
             x_bs = x[i : i + bs]
-            x_bs = vae.decode(x_bs.detach() / vae.config.scaling_factor).sample
+            with torch.cuda.amp.autocast(enabled=(config.mixed_precision == 'fp16' or config.mixed_precision == 'bf16')):
+                x_bs = vae.decode(x_bs.detach() / vae.config.scaling_factor).sample
             x_out.append(x_bs)
         x = torch.cat(x_out, dim=0)
         samples = rearrange(x, "(B T) C H W -> B C T H W", B=B)
@@ -198,13 +200,13 @@ def train():
                 y_mask = batch[2]
             else:
                 with torch.no_grad():
-                    with torch.cuda.amp.autocast(enabled=(config.mixed_precision == 'fp16' or config.mixed_precision == 'bf16')):
-                        txt_tokens = tokenizer(
-                            y, max_length=max_length, padding="max_length", truncation=True, return_tensors="pt"
-                        ).to(accelerator.device)
-                        y = text_encoder(
-                            txt_tokens.input_ids, attention_mask=txt_tokens.attention_mask)[0][:, None]
-                        y_mask = txt_tokens.attention_mask[:, None, None]
+                    #with torch.cuda.amp.autocast(enabled=(config.mixed_precision == 'fp16' or config.mixed_precision == 'bf16')):
+                    txt_tokens = tokenizer(
+                        y, max_length=max_length, padding="max_length", truncation=True, return_tensors="pt"
+                    ).to(accelerator.device)
+                    y = text_encoder(
+                        txt_tokens.input_ids, attention_mask=txt_tokens.attention_mask)[0][:, None]
+                    y_mask = txt_tokens.attention_mask[:, None, None]
 
             #import pdb; pdb.set_trace()
             # Sample a random timestep for each image
