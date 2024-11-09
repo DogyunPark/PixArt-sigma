@@ -9,8 +9,8 @@ data = dict(
 )
 #image_size = 512
 image_size = (384, 640)
-num_frames = 16
-frame_interval = 3
+num_frames = 96
+frame_interval = 2
 
 # model setting
 #model = 'STDiT-XL/2'
