@@ -163,6 +163,7 @@ def train():
             batch = next(train_dataloader_iter)
             x = batch["video"].to(accelerator.device)  # [B, C, T, H, W]
             y = batch["text"]
+            save_sample(x[0], fps=8, save_path=os.path.join('/data/cvpr25/test/', y[0]))
             import pdb; pdb.set_trace()
             if step < skip_step:
                 global_step += 1
