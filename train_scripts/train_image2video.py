@@ -163,6 +163,7 @@ def train():
             batch = next(train_dataloader_iter)
             x = batch["video"].to(accelerator.device)  # [B, C, T, H, W]
             y = batch["text"]
+            import pdb; pdb.set_trace()
             if step < skip_step:
                 global_step += 1
                 continue    # skip data in the resumed ckpt

@@ -8,7 +8,7 @@ data = dict(
     load_vae_feat=False, load_t5_feat=False,
 )
 #image_size = 512
-image_size = 256
+image_size = (384, 640)
 num_frames = 16
 frame_interval = 3
 
